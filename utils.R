@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Package Functions -------------------------------------------------------
@@ -25,6 +25,11 @@ if (is_package_installed("pipeR")) {
 
 ### Debugging Functions -----------------------------------------------------
 
+message_if <- function(condition, string) {
+  if (condition) message(string)
+}
+
+# duplicate of message_if() that responds to global debug_mode_on flag
 debug_message <- function(string) {
   if (debug_mode_on) message(string)
 }
@@ -143,6 +148,23 @@ slice_from <- function(thing, from) {
   return (seq(from, length(thing)))
 }
 
+first <- function(thing) {
+  return (thing[[1]])
+}
+
+last <- function(thing) {
+  return (thing[[length(thing)]])
+}
+
+nth <- function(thing, n) {
+  return (thing[[n]])
+}
+
+fix_subset <- function(vec, condition, func) {
+  vec[condition] <- func(vec[condition])
+  return (vec)
+}
+
 
 ### Control Flow ------------------------------------------------------------
 
@@ -151,6 +173,21 @@ if.else <- function(condition, true_value, false_value) {
     return (true_value)
   } else {
     return (false_value)
+  }
+}
+
+
+
+### Vector Functions --------------------------------------------------------
+
+recycle_arguments <- function(arg, len) {
+  if (length(arg) < len) {
+    message_if(len %% length(arg) != 0L, "arguments were recycled unevenly")
+    return (rep_len(arg, len))
+  } else if (length(drop.codes > num_cols)) {
+    stop ("drop.codes has too many items")
+  } else {
+    return (arg)
   }
 }
 
@@ -188,23 +225,21 @@ round_to_int <- function(numbers, digits = 0L) {
 }
 
 is_NA_or_0L <- function(ints) {
-  if (!is.integer(ints)) {
-    if (is.double(ints)) {
-      warning("This method is for integers; you supplied doubles")
-    } else {
-      stop("This method is for integers; you supplied some non-numeric type")
-    }
+  if (!is.numeric(ints)) {
+    stop("This method is for integers; you supplied some non-numeric type")
+  }
+  if (is.double(ints)) {
+    warning("This method is for integers; you supplied doubles")
   }
   return (is.na(ints) | ints == 0L)
 }
 
 is_NA_or_0 <- function(dbls, tol = NULL) {
-  if (!is.double(dbls)) {
-    if (is.integer(dbls)) {
-      warning("This method is for doubles; you supplied something else")
-    } else {
-      stop("This method is for doubles; you supplied some non-numeric type")
-    }
+  if (!is.numeric(dbls)) {
+    stop("This method is for doubles; you supplied some non-numeric type")
+  }
+  if (is.integer(dbls)) {
+    warning("This method is for doubles; you supplied integers")
   }
   if (is.null(tol)) {
     return (is.na(dbls) | dbls == 0)
@@ -228,21 +263,61 @@ regex_metacharacters_escaped <- paste0("\\", regex_metacharacters)
 regex_metacharacters_set <- "[]|{}$()*+.?\\[^]"
 regex_metacharacters_set_captured <- paste0("(", regex_metacharacters_set, ")")
 
+rem <- function(x, pattern, ...) {
+  return (sub(pattern = pattern, replacement = "", x = x, ...))
+}
+
 grem <- function(x, pattern, ...) {
   return (gsub(pattern = pattern, replacement = "", x = x, ...))
 }
 
-gremm <- function(x, patterns, ...) {
-  pattern <- paste0(patterns, collapse = "|")
-  grem(x, pattern, ...)
+fix_spaces <- function(strings) {
+  return (gsub(pattern = "  +", replacement = " ", strings, fixed = TRUE))
 }
 
 word <- function(strings) {
   return (paste0("\\b", strings, "\\b"))
 }
 
+capturing_group <- function(strings) {
+  return (paste0("(", strings, ")"))
+}
+
+selection_group <- function(strings, not = FALSE) {
+  if (not) {
+    invert <- "^"
+  } else {
+    invert <- ""
+  }
+  return (paste0("[", invert, strings, "]"))
+}
+
 literal <- function(strings) {
   return (gsub(pattern = regex_metacharacters_set_captured, "\\\\\\1", strings))
+}
+
+with_preceding <- function(strings, marks = " ", mandatory = FALSE) {
+  needs_grouping <- nchar(marks) > 1L
+  marks[needs_grouping] <- capturing_group(marks[needs_grouping])
+  if (mandatory) {
+    return (paste0(marks, capturing_group(strings)))
+  } else {
+    return (paste0(marks, "?", capturing_group(strings)))
+  }
+}
+
+with_following <- function(strings, marks = " ", mandatory = FALSE) {
+  needs_grouping <- nchar(marks) > 1L
+  marks[needs_grouping] <- capturing_group(marks[needs_grouping])
+  if (mandatory) {
+    return (paste0(capturing_group(strings), marks))
+  } else {
+    return (paste0(capturing_group(strings), marks, "?"))
+  }
+}
+
+any_of <- function(strings) {
+  return (capturing_group(paste0(strings, collapse = "|")))
 }
 
 and_preceding <- function(strings, precedings = " ", succeedings = " ", exact = FALSE, greedy = FALSE, stoppers = "") {
@@ -251,6 +326,24 @@ and_preceding <- function(strings, precedings = " ", succeedings = " ", exact = 
   }
   greed <- if_else(greedy, "", "?")
   return (paste0("([^", precedings, stoppers, "]*", precedings, ")*", greed, strings, succeedings))
+}
+
+remove_before <- function(strings, points, exact = FALSE, greedy = FALSE, inclusive = FALSE) {
+  if (greedy) {
+    positions <- map_int(gregexpr(points, strings, fixed = exact), last)
+  } else {
+    positions <- as.integer(regexpr(points, strings, fixed = exact))
+  }
+  slicer <- positions != -1L
+  if (is.factor(strings)) {
+    strings <- as.character(strings)
+  }
+  if (inclusive) {
+    strings[slicer] <- sub(points, "", substr(strings[slicer], start = positions, stop = nchar(strings)), fixed = exact)
+  } else {
+    strings[slicer] <- substr(strings[slicer], start = positions[slicer], stop = nchar(srings))
+  }
+  return (strings)
 }
 
 and_rest_of <- function(strings, precedings = " ", exact = FALSE, greedy = TRUE, stoppers = "") {
@@ -266,6 +359,28 @@ and_rest_of <- function(strings, precedings = " ", exact = FALSE, greedy = TRUE,
   chars <- if_else(stoppers == "", "[ -~]*", paste0("[^", stoppers, "]*"))
   greed <- if_else(greedy, "", paste0("(?!", chars, strings, ")"))
   return (paste0(precedings, strings, greed, chars))
+}
+
+remove_after <- function(strings, points, exact = FALSE, greedy = FALSE, inclusive = FALSE) {
+  if (greedy) {
+    matches <- regexpr(points, strings, fixed = exact)
+    match_lengths <- attr(matches, "match.length")
+    positions <- as.integer(matches)
+  } else {
+    matches <- gregexpr(points, strings, fixed = exact)
+    match_lengths <- map_int(matches, ~last(. %@% "match.length"))
+    positions <- map_int(matches, last)
+  }
+  slicer <- positions != -1L
+  if (is.factor(strings)) {
+    strings <- as.character(strings)
+  }
+  if (inclusive) {
+    strings[slicer] <- substr(strings[slicer], start = 1L, stop = positions[slicer] - 1L)
+  } else {
+    strings[slicer] <- substr(strings[slicer], start = 1L, stop = positions[slicer] + match_lengths[slicer])
+  }
+  return (strings)
 }
 
 and_between <- function(starts, ends, preceding_starts = " ", precedings = " ", succeedings = " ", exact = FALSE, greedy = FALSE, stoppers = "") {
@@ -297,8 +412,30 @@ tabulate_factor <- function(fact) {
   return (tabulate(fact, nbins = nlevels(fact)))
 }
 
+mode <- function(nums) {
+  return (which.max(tabulate(nums)))
+}
+
+mode_and_others <- function(nums) {
+  all_nums <- unique(nums)
+  tabs <- tabulate(nums)
+  present_nums <- all_nums[tabs > 0L]
+  mode_num <- all_nums[which.max(tabs)]
+  non_mode_nums <- present_nums %d% mode_num
+  return (list("mode" = mode_num, "others" = non_mode_nums))
+}
+
 mode_factor <- function(fact) {
   return (levels(fact)[which.max(tabulate_factor(fact))])
+}
+
+mode_and_others_factor <- function(fact) {
+  all_levels <- levels(fact)
+  tabs <- tabulate_factor(fact)
+  present_levels <- all_levels[tabs > 0L]
+  mode_level <- all_levels[which.max(tabs)]
+  non_mode_levels <- present_levels %d% mode_level
+  return (list("mode" = mode_level, "others" = non_mode_levels))
 }
 
 level_proportions <- function(column, na.rm = FALSE) {
@@ -316,71 +453,20 @@ missing_levels <- function(fact) {
   return (levels(fact)[tabulate_factor(fact) == 0L])
 }
 
-if (is_package_loaded("data.table")) {
-  fill_matching_values <- function(data, fact_col, code_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, numeric_code = TRUE, extra.codes = 'reduce') {
-    fact_colname <- deparse(substitute(fact_col))
-    code_colname <- deparse(substitute(code_col))
-    lookup_table <- eval(parse(text = paste0("data[, as.character(first(unique(", fact_colname, ") %[!=]% '')), keyby = ", code_colname, "]")))
-    setnames(lookup_table, c(code_colname, "V1"), c("codes", "values"))
-    if (numeric_code) {
-      lookup_table <- lookup_table[!is.na(codes), ]
-    } else {
-      lookup_table <- lookup_table[codes != "", ]
-      lookup_table[, codes := as.character(codes)]
-    }
-    codes <- drop_NA(unique(data[[code_colname]]))
-    verified_codes <- lookup_table[["codes"]]
-    for (code in codes) {
-      if (code %c% verified_codes) {
-        replacement <- lookup_table[codes == code, ][["values"]]
-        eval(parse(text = paste0("data[", code_colname, " == ", as.character(code), ", ", fact_colname, " := replacement]")))
-      } else if (drop.codes) {
-        if (numeric_code) {
-          eval(parse(text = paste0("data[", code_colname, " == ", as.character(code), ", ", code_colname, " := NA]")))
-        } else {
-          eval(parse(text = paste0("data[", code_colname, ' == "', as.character(code), '", ', code_colname, ' := ""]')))
-        }
-      }
-    }
-    drop_missing_levels(data[[fact_colname]])
-    if (backfill) {
-      values <- levels(data[[fact_colname]]) %[!=]% ""
-      verified_values <- lookup_table[["values"]]
-      for (value in values) {
-        if (value %c% verified_values) {
-          replacement <- lookup_table[values == value, ][["codes"]]
-          if (is_plural(replacement)) {
-            if (extra.codes == 'reduce') {
-              if (numeric_code) {
-                eval(parse(text = paste0("sub_data <- data[", fact_colname, ' == "', as.character(value), '", as.factor(', code_colname, ")]")))
-              } else {
-                eval(parse(text = paste0("sub_data <- data[", fact_colname, ' == "', as.character(value), '", ', code_colname, "][, drop = TRUE]")))
-              }
-              if (numeric_code) {
-                best_code <- as.integer(mode_factor(sub_data))
-              } else {
-                best_code <- mode_factor(sub_data)
-              }
-              other_codes <- replacement %d% best_code
-              for (other_code in other_codes) {
-                if (numeric_code) {
-                  eval(parse(text = paste0("data[", code_colname, " == ", as.character(other_code), ", ", code_colname, " := ", as.character(best_code), "]")))
-                } else {
-                  eval(parse(text = paste0("data[", code_colname, ' == "', as.character(other_code), '", ', code_colname, ' := "', as.character(best_code), '"]')))
-                }
-              }
-              replacement <- best_code
-            } else if (extra.codes == 'recycle') {
-              replacement <- rep_len(replacement, eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", .N]'))))
-            }
-          }
-          eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", ', code_colname, " := replacement]")))
-        } else if (drop.values) {
-          eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", ', fact_colname, ' := ""]')))
-        }
-      }
-    }
-    invisible(data)
+level_index <- function(fact, lev) {
+  if (is.na(lev)) {
+    return (which(is.na(levels(fact))))
+  } else {
+    return (which(levels(fact) == lev))
+  }
+}
+
+# duplicate of level_index() with better name and default argument for finding NAs
+NA_index <- function(fact, NA_level = NA_character_) {
+  if (is.na(NA_level)) {
+    return (which(is.na(levels(fact))))
+  } else {
+    return (which(levels(fact) == NA_level))
   }
 }
 
@@ -390,8 +476,8 @@ if (is_package_installed("data.table")) {
     data.table::setattr(vec, "names", new_names)
   }
   
-  re_level <- function(vec, new_levels) {
-    data.table::setattr(vec, "levels", new_levels)
+  re_level <- function(vec, new_levels, NA_level = NA_character_) {
+      data.table::setattr(vec, "levels", fix_NA_levels(new_levels, NA_level = NA_level))
   }
 } else {
   re_name <- function(vec, new_names) {
@@ -401,6 +487,14 @@ if (is_package_installed("data.table")) {
   re_level <- function(vec, new_levels) {
     levels(vec) <- new_levels
   }
+}
+
+fix_NA_levels <- function(levs, NA_level = NA_character_) {
+  if (!is.na(NA_level) && anyNA(levs)) {
+    warning("NA levels set to the given (character) NA_level")
+    levs[is.na(levs)] <- NA_level
+  }
+  return (levs)
 }
 
 format_levels <- function(fact, func, ...) {
@@ -424,7 +518,7 @@ format_similar_levels <- function(fact, pairings, exact = FALSE, ...) {
 
 replace_level <- function(fact, from, to) {
   assert_that(length(from) == 1L && length(to) == 1L, 
-              msg = "either (or both) 'from' or 'to' are of length >1L (you may have intended to use replace_levels, not replace_level")
+              msg = "either (or both) 'from' or 'to' are of length > 1L (you may have intended to use replace_levels, not replace_level")
   new_levels <- levels(fact)
   new_levels[new_levels == from] <- to
   re_level(fact, new_levels)
@@ -449,6 +543,7 @@ replace_levels <- function(fact, from, to) {
 rename_levels <- function(fact, changes) {
   new_levels <- levels(fact)
   re_name(new_levels, new_levels)
+  changes <- changes %whichin% new_levels
   changes_names <- get_names(changes)
   for (i in seq_along(changes)) {
     new_levels[[changes[[i]]]] <- changes_names[[i]]
@@ -465,13 +560,28 @@ rename_similar_levels <- function(fact, changes, exact = FALSE) {
   re_level(fact, new_levels)
 }
 
+add_levels <- function(fact, add) {
+  new_levels <- levels(fact)
+  add <- add %which!in% new_levels
+  if (!is_empty(add)) {
+    re_level(fact, c(new_levels, add))
+  } else {
+    invisible(fact)
+  }
+}
+
 drop_levels <- function(fact, drop, to = "") {
   new_levels <- levels(fact)
-  re_name(new_levels, new_levels)
-  for (i in seq_along(drop)) {
-    new_levels[[drop[[i]]]] <- to
+  drop <- drop %whichin% new_levels
+  if (!is_empty(drop)) {
+    re_name(new_levels, new_levels)
+    for (i in seq_along(drop)) {
+      new_levels[[drop[[i]]]] <- to
+    }
+    re_level(fact, unname(new_levels))
+  } else {
+    invisible(fact)
   }
-  re_level(fact, unname(new_levels))
 }
 
 drop_similar_levels <- function(fact, drop, to = "", exact = FALSE) {
@@ -484,13 +594,6 @@ drop_similar_levels <- function(fact, drop, to = "", exact = FALSE) {
 
 drop_missing_levels <- function(fact, to = "") {
   drop_levels(fact, drop = missing_levels(fact), to)
-}
-
-drop_missing_levels_by_col <- function(data, cols = colnames(data), to = "") {
-  for (col in cols) {
-    drop_missing_levels(data[[col]], to)
-  }
-  invisible(data)
 }
 
 drop_levels_formula <- function(fact, expr, to = "") {
@@ -553,79 +656,219 @@ otherize_levels_prop <- function(fact, cutoff, other = "other", exact = FALSE) {
   drop_levels(fact, drop = dropped_levels, to = other)
 }
 
-by_col <- function(data, col_func, cols = colnames(data), ...) {
+if (is_package_loaded("data.table")) {
+  fill_matching_values <- function(data, code_col, value_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_level_value = "", NA_level_code = NA_character_, assume.exclusive = FALSE) {
+    code_to_values <- eval(parse(text = paste0("data[as.integer(", value_col, ") != ", as.character(NA_index(data[[value_col]], NA_level_value)), "L, .('codes' = ", code_col, ", 'values' = ", value_col, ")]")))
+    code_to_values <- unique(code_to_values[as.integer(codes) != NA_index(code_to_values[["codes"]], NA_level_code), ])
+    code_to_values <- code_to_values[, .(values, 'GRPN' = .N), keyby = codes]
+    indeterminate_codes <- code_to_values[GRPN > 1L, as.character(unique(codes))]
+    value_NA_index <- NA_index(data[[value_col]], NA_level_value)
+    if (assume.exclusive) {
+      for (a_code in indeterminate_codes) {
+        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_col, " == a_code & as.integer(", value_col, ") != ", as.character(value_NA_index), "L, ", value_col, "]"))))
+        replace_levels(code_to_values[["values"]], from = present_levels[["others"]], to = present_levels[["mode"]])
+      }
+    } else {
+      for (a_code in indeterminate_codes) {
+        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_col, " == a_code & as.integer(", value_col, ") != ", as.character(value_NA_index), "L, ", value_col, "]"))))
+        set(code_to_values, i = which(code_to_values[["codes"]] == a_code), j = "values", present_levels[["mode"]])
+      }
+    }
+    code_to_values <- unique(code_to_values[, .(codes, values)])
+    verified_codes <- code_to_values[["codes"]]
+    if (drop.codes) {
+      all_codes <- unique(data[[code_col]] %[]% (as.integer(.) != NA_index(data[[code_col]], NA_level_code)))
+      unverified_codes <- all_codes %d% verified_codes
+      drop_levels(data[[code_col]], drop = unverified_codes, to = NA_level_code)
+    }
+    slicer <- as.integer(data[[code_col]]) != NA_index(data[[code_col]], NA_level_code)
+    joined_data <- eval(parse(text = paste0('code_to_values[data, .(values), on = c("codes"="', code_col, '")]')))
+    eval(parse(text = paste0("data[slicer, ", value_col, ' := joined_data[["values"]][slicer]]')))
+    if (backfill) {
+      value_to_codes <- eval(parse(text = paste0("data[as.integer(", code_col, ") != ", as.character(NA_index(data[[code_col]], NA_level_code)), "L, .('values' = ", value_col, ", 'codes' = ", code_col, ")]")))
+      value_to_codes <- unique(value_to_codes[as.integer(values) != NA_index(data[[value_col]], NA_level_value), ])
+      value_to_codes <- value_to_codes[, .(codes, 'GRPN' = .N), keyby = values]
+      indeterminate_values <- value_to_codes[GRPN > 1L, as.character(unique(values))]
+      code_NA_index <- NA_index(data[[code_col]], NA_level_code)
+      if (assume.exclusive) {
+        for (a_value in indeterminate_values) {
+          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", value_col, " == a_value & as.integer(", code_col, ") != ", as.character(code_NA_index), "L, ", code_col, "]"))))
+          replace_levels(value_to_codes[["codes"]], from = present_levels[["others"]], to = present_levels[["mode"]])
+        }
+      } else {
+        for (a_value in indeterminate_values) {
+          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", value_col, " == a_value & as.integer(", code_col, ") != ", as.character(code_NA_index), "L, ", code_col, "]"))))
+          set(value_to_codes, i = which(value_to_codes[["values"]] == a_value), j = "codes", present_levels[["mode"]])
+        }
+      }
+      value_to_codes <- unique(value_to_codes[, .(values, codes)])
+      verified_values <- value_to_codes[["values"]]
+      if (drop.values) {
+        all_values <- unique(data[[value_col]] %[]% (as.integer(.) != NA_index(data[[value_col]], NA_level_value)))
+        unverified_values <- all_values %d% verified_values
+        drop_levels(data[[value_col]], drop = unverified_values, to = NA_level_value)
+      }
+      slicer <- as.integer(data[[value_col]]) != NA_index(data[[value_col]], NA_level_value)
+      joined_data <- eval(parse(text = paste0('value_to_codes[data, .(codes), on = c("values"="', value_col, '")]')))
+      eval(parse(text = paste0("data[slicer, ", code_col, ' := joined_data[["codes"]][slicer]]')))
+    }
+    invisible(data)
+  }
+  
+  fill_matching_values_ <- function(data, code_col, value_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_level_value = "", NA_level_code = NA_character_, assume.exclusive = FALSE) {
+    code_col <- deparse(substitute(code_col))
+    value_col <- deparse(substitute(value_col))
+    fill_matching_values(data, code_col, value_col, drop.codes, backfill, drop.values, NA_level_value, NA_level_code, assume.exclusive)
+  }
+  
+  correct_mistakes <- function() {
+    # do fill_matching_values()-like stuff but correct based on other columns (useful for me here as I'll be correcting City and Country based on latitude and longitude)
+    # get code_to_values (here observation 1 and observation 2 or obseration and corollary)
+    # n-dimensional (easy case 2-dimensional like I have) corresponding values that can be used (distance deviation from median-wise) to determine whether two corollaries of an observation are different and should be different or not *and/or* whether two observations are labeled differently but should be labeled the same
+  }
+}
+
+by_col <- function(data, col_func, cols = colnames(keep(data, is.factor)), ...) {
   for (col in cols) {
     col_func(data[[col]], ...)
   }
   invisible(data)
 }
 
-format_levels_by_col <- function(data, func, cols = colnames(data), ...) {
+fix_NAs_by_col <- function(data, NA_level = "<NA>", cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    if (anyNA(data[[col]])) {
+      data[[col]] %>% add_levels(NA_level)
+      set(data, i = which(is.na(data[[col]])), j = col, NA_level)
+    }
+  }
+  invisible(data)
+}
+
+format_levels_by_col <- function(data, func, cols = colnames(keep(data, is.factor)), ...) {
   for (col in cols) {
     format_levels(data[[col]], func, ...)
   }
   invisible(data)
 }
 
-replace_level_by_col <- function(data, from, to, cols = colnames(data)) {
+format_similar_levels_by_col <- function(data, pairings, exact = FALSE, cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    format_similar_levels(data[[col]], pairings)
+  }
+  invisible(data)
+}
+
+replace_level_by_col <- function(data, from, to, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     replace_level(data[[col]], from, to)
   }
   invisible(data)
 }
 
-replace_levels_by_col <- function(data, from, to, cols = colnames(data)) {
+replace_levels_by_col <- function(data, from, to, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     replace_levels(data[[col]], from, to)
   }
   invisible(data)
 }
 
-rename_levels_by_col <- function(data, changes, cols = colnames(data)) {
+rename_levels_by_col <- function(data, changes, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     rename_levels(data[[col]], changes)
   }
   invisible(data)
 }
 
-rename_similar_levels_by_col <- function(data, changes, cols = colnames(data), exact = FALSE) {
+rename_similar_levels_by_col <- function(data, changes, exact = FALSE, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     rename_similar_levels(data[[col]], changes, exact)
   }
   invisible(data)
 }
 
-drop_levels_by_col <- function(data, drop, cols = colnames(data), to = "") {
+add_levels_by_col <- function(data, add, cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    add_levels(data[[col]], add)
+  }
+  invisible(data)
+}
+
+drop_levels_by_col <- function(data, drop, to = "", cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     drop_levels(data[[col]], drop, to)
   }
   invisible(data)
 }
 
-drop_similar_levels_by_col <- function(data, drop, cols = colnames(data), to = "", exact = FALSE) {
+drop_similar_levels_by_col <- function(data, drop, to = "", exact = FALSE, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     drop_similar_levels(data[[col]], drop, to, exact)
   }
   invisible(data)
 }
 
-keep_levels_by_col <- function(data, keep, cols = colnames(data), to = "") {
+drop_missing_levels_by_col <- function(data, to = "", cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    drop_missing_levels(data[[col]], to)
+  }
+  invisible(data)
+}
+
+drop_levels_formula_by_col <- function(data, expr, to = "", cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    drop_levels_formula(data[[col]], expr, to)
+  }
+  invisible(data)
+}
+
+keep_levels_by_col <- function(data, keep, to = "", cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     keep_levels(data[[col]], keep, to)
   }
   invisible(data)
 }
 
-keep_similar_levels_by_col <- function(data, keep, cols = colnames(data), to = "", exact = FALSE) {
+keep_similar_levels_by_col <- function(data, keep, to = "", exact = FALSE, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     keep_similar_levels(data[[col]], keep, to, exact)
   }
   invisible(data)
 }
 
-reduce_levels_by_col <- function(data, rules, cols = colnames(data), other = "other", exact = FALSE) {
+reduce_levels_by_col <- function(data, rules, other = "other", exact = FALSE, cols = colnames(keep(data, is.factor))) {
   for (col in cols) {
     reduce_levels(data[[col]], rules, other, exact)
+  }
+  invisible(data)
+}
+
+otherize_levels_rank_by_col <- function(data, rank, other = "other", exact = FALSE, cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    otherize_levels_rank(data[[col]], rank, other, exact)
+  }
+  invisible(data)
+}
+  
+otherize_levels_prop_by_col <- function(data, cutoff, other = "other", exact = FALSE, cols = colnames(keep(data, is.factor))) {
+  for (col in cols) {
+    otherize_levels_prop(data[[col]], cutoff, other, exact)
+  }
+  invisible(data)
+}
+
+fill_matching_values_by_col <- function(data, code_cols, value_cols, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_level_value = "", NA_level_code = NA_character_, assume.exclusive = FALSE) {
+  assert_that(length(value_cols) == length(code_cols), 
+              msg = "There is a different number of value and code columns")
+  num_cols <- length(value_cols)
+  drop.codes       <- recycle_arguments(drop.codes,       num_cols)
+  backfill         <- recycle_arguments(backfill,         num_cols)
+  drop.values      <- recycle_arguments(drop.values,      num_cols)
+  NA_level_value    <- recycle_arguments(NA_level_value,    num_cols)
+  NA_level_code    <- recycle_arguments(NA_level_code,    num_cols)
+  assume.exclusive <- recycle_arguments(assume.exclusive, num_cols)
+  for (i in seq_along(value_cols)) {
+    fill_matching_values(data, code_col = code_cols[[i]], value_col = value_cols[[i]], drop.codes = drop.codes[[i]], backfill = backfill[[i]], drop.values = drop.values[[i]], NA_level_value = NA_level_value[[i]], NA_level_code = NA_level_code[[i]], assume.exclusive = assume.exclusive[[i]])
   }
   invisible(data)
 }
@@ -648,7 +891,8 @@ compose_rev <- function(f, g) {
 
 # safe defaults
 `%||%` <- function(a, b) if (!is.null(a)) a else b
-`%NA%` <- function(a, b) if_else(is.na(a), b, a)
+`%NA%` <- function(a, b) if (!is.na(a)) a else b
+`%OR%` <- function(a, b) if (!is.null(a) && !is_empty(a) && !is.na(a)) a else b
 
 # slicing
 `%[==]%` <- function(a, b) a[a == b]

@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 # ### initialize plotly ###
@@ -26,6 +26,12 @@ shinyServer(function(input, output, session) {
   
   overview_proxy <- leafletProxy("overview_map")
   civilian_proxy <- leafletProxy("civilian_map")
+  overview_proxy_fast <- leafletProxy("overview_map", deferUntilFlush = FALSE)
+  civilian_proxy_fast <- leafletProxy("civilian_map", deferUntilFlush = FALSE)
+  
+  previous_start_date <- earliest_date
+  previous_end_date <- latest_date
+  animation_end_date <- latest_date
   
 
 ### War Selections ----------------------------------------------------------
@@ -181,51 +187,86 @@ shinyServer(function(input, output, session) {
     <b>Satellite</b> map: visualize current-day city features"
   })
   
+  animation_delta <- eventReactive(eventExpr = input$map_animate_delta, 
+                                   valueExpr = {
+                                     switch(input$map_animate_delta, 
+                                            "year"  = years(1L), 
+                                            "month" = months(1L), 
+                                            "week"  = weeks(1L))
+                                   }, 
+                                   ignoreInit = FALSE, 
+                                   ignoreNULL = TRUE)
+  
+  animation_toggle <- reactiveVal(value = FALSE)
+  
+  observeEvent(input$map_animate_button, {
+    debug_message("animating map")
+    wars_selected <- war_tags[map(war_selected, ~(.)()) == TRUE]
+    if (input$tabs %c% war_tags || !is_empty(wars_selected)) {
+      previous_start_date <<- input$dateRange[1]
+      previous_end_date   <<- input$dateRange[2]
+      if (input$tabs %c% war_tags) {
+        relevant_first_mission <- war_first_missions[[input$tabs]]
+        relevant_last_mission <- war_last_missions[[input$tabs]]
+      } else {
+        relevant_first_mission  <- war_first_missions[[first(wars_selected)]]
+        relevant_last_mission <- war_last_missions[[last(wars_selected)]]
+      }
+      current_start_date  <- floor_date(relevant_first_mission, input$map_animate_delta)
+      current_end_date    <- current_start_date + animation_delta()
+      animation_end_date <<- ceiling_date(relevant_last_mission, input$map_animate_delta)
+      animation_toggle(TRUE)
+      updateDateRangeInput(session, 
+                           inputId = "dateRange", 
+                           start = current_start_date, 
+                           end = current_end_date)
+    }
+  })
+  
 
 ### Pilot Map ---------------------------------------------------------------
   
   pilot_text_output <- function(war_tag) {
+    force(war_tag)
     renderText(war_video_description_phrases[[war_tag]])
   }
-  output$pilot_text_WW1     <- pilot_text_output(WW1)
-  output$pilot_text_WW2     <- pilot_text_output(WW2)
-  output$pilot_text_Korea   <- pilot_text_output(Korea)
-  output$pilot_text_Vietnam <- pilot_text_output(Vietnam)
+  for (tag in war_tags) {
+    output[[pilot_text_id[[tag]]]] <- pilot_text_output(tag)
+  }
   
   pilot_video_output <- function(war_tag) {
+    force(war_tag)
     renderUI({
       tags$iframe(src = youtube_embed(war_videos[[war_tag]]), width = video_width, height = video_height)
     })
   }
-  output$pilot_video_WW1     <- pilot_video_output(WW1)
-  output$pilot_video_WW2     <- pilot_video_output(WW2)
-  output$pilot_video_Korea   <- pilot_video_output(Korea)
-  output$pilot_video_Vietnam <- pilot_video_output(Vietnam)
+  for (tag in war_tags) {
+    output[[pilot_video_id[[tag]]]] <- pilot_video_output(tag)
+  }
   
 
 ### Commander Map -----------------------------------------------------------
   
   commander_text_output <- function(war_tag) {
+    force(war_tag)
     renderText(war_maps_description_phrases[[war_tag]])
   }
-  output$commander_text_WW1     <- commander_text_output(WW1)
-  output$commander_text_WW2     <- commander_text_output(WW2)
-  output$commander_text_Korea   <- commander_text_output(Korea)
-  output$commander_text_Vietnam <- commander_text_output(Vietnam)
+  for (tag in war_tags) {
+    output[[commander_text_id[[tag]]]] <- commander_text_output(tag)
+  }
   
   commander_maps_output <- function(war_tag, num) {
+    force(war_tag)
+    force(num)
     renderUI({
       img(src = war_maps[[war_tag]][[num]], width = image_width, height = image_height)
     })
   }
-  output$commander_map_WW1_1     <- commander_maps_output(WW1, 1)
-  output$commander_map_WW1_2     <- commander_maps_output(WW1, 2)
-  output$commander_map_WW2_1     <- commander_maps_output(WW2, 1)
-  output$commander_map_WW2_2     <- commander_maps_output(WW2, 2)
-  output$commander_map_Korea_1   <- commander_maps_output(Korea, 1)
-  output$commander_map_Korea_2   <- commander_maps_output(Korea, 2)
-  output$commander_map_Vietnam_1 <- commander_maps_output(Vietnam, 1)
-  output$commander_map_Vietnam_2 <- commander_maps_output(Vietnam, 2)
+  for (tag in war_tags) {
+    for (i in seq_along(commander_maps_ids[[tag]])) {
+      output[[commander_maps_ids[[tag]][[i]]]] <- commander_maps_output(tag, i)
+    }
+  }
   
 
 ### Civilian Map ------------------------------------------------------------
@@ -270,83 +311,22 @@ shinyServer(function(input, output, session) {
   })
   
   
-### Data Graph Inputs -------------------------------------------------------
-  
-  war_sandbox_group_input <- function(war_tag) {
-    switch(war_tag, 
-           WW1     = input$WW1_sandbox_group, 
-           WW2     = input$WW2_sandbox_group, 
-           Korea   = input$Korea_sandbox_group, 
-           Vietnam = input$Vietnam_sandbox_group)
-  }
-  
-  war_sandbox_ind_input <- function(war_tag) {
-    switch(war_tag, 
-           WW1     = input$WW1_sandbox_ind, 
-           WW2     = input$WW2_sandbox_ind, 
-           Korea   = input$Korea_sandbox_ind, 
-           Vietnam = input$Vietnam_sandbox_ind)
-  }
-  
-  war_sandbox_dep_input <- function(war_tag) {
-    switch(war_tag, 
-           WW1     = input$WW1_sandbox_dep, 
-           WW2     = input$WW2_sandbox_dep, 
-           Korea   = input$Korea_sandbox_dep, 
-           Vietnam = input$Vietnam_sandbox_dep)
-  }
-  
-  war_hist_slider_input <- function(war_tag) {
-    switch(war_tag, 
-           WW1     = input$WW1_hist_slider, 
-           WW2     = input$WW2_hist_slider, 
-           Korea   = input$Korea_hist_slider, 
-           Vietnam = input$Vietnam_hist_slider)
-  }
-  
-  war_hor_trans_input <- function(war_tag) {
-    switch(war_tag, 
-           WW1     = input$WW1_transformation_hor, 
-           WW2     = input$WW2_transformation_hor, 
-           Korea   = input$Korea_transformation_hor, 
-           Vietnam = input$Vietnam_transformation_hor)
-  }
-  
-  war_ver_trans_input <- function(war_tag) {
-    switch(war_tag, 
-           WW1     = input$WW1_transformation_ver, 
-           WW2     = input$WW2_transformation_ver, 
-           Korea   = input$Korea_transformation_ver, 
-           Vietnam = input$Vietnam_transformation_ver)
-  }
-  
-
-### Dropdown Inputs ---------------------------------------------------------
-
-  dropdown_input <- function(type) {
-    input[[type]]
-    # switch(type, 
-    #        country = input$country, 
-    #        aircraft = input$aircraft, 
-    #        weapon = input$weapon)
-  }
-  
-  
 ### Data Histograms ---------------------------------------------------------
   
   histogram_output <- function(war_tag) {
+    force(war_tag)
     renderPlot({
       war_dt <- (war_selection[[war_tag]])()
-      group_input <- war_sandbox_group_input(war_tag)
-      ver_trans_input <- war_ver_trans_input(war_tag)
+      group_input <- input[[war_sandbox_group_ids[[war_tag]]]]
+      ver_trans_input <- input[[war_transformation_ver_ids[[war_tag]]]]
       if (group_input == "None") {
         hist_plot <- ggplot(mapping = aes(x = war_dt[["Mission_Date"]])) + 
-          geom_histogram(bins = war_hist_slider_input(war_tag))
+          geom_histogram(bins = input[[war_hist_slider_ids[[war_tag]]]])
       } else {
         group_category <- war_categorical[[war_tag]][[group_input]]
         hist_plot <- ggplot(mapping = aes(x     = war_dt[["Mission_Date"]], 
                                           color = war_dt[[group_category]])) + 
-          geom_freqpoly(bins = war_hist_slider_input(war_tag)) + 
+          geom_freqpoly(bins = input[[war_hist_slider_ids[[war_tag]]]]) + 
           guides(color = guide_legend(title = group_input))
       }
       hist_plot <- hist_plot + 
@@ -362,19 +342,19 @@ shinyServer(function(input, output, session) {
       }
     })
   }
-  output$WW1_hist     <- histogram_output(WW1)
-  output$WW2_hist     <- histogram_output(WW2)
-  output$Korea_hist   <- histogram_output(Korea)
-  output$Vietnam_hist <- histogram_output(Vietnam)
+  for (tag in war_tags) {
+    output[[war_hist_ids[[tag]]]] <- histogram_output(tag)
+  }
   
   
 ### Data Sandboxes ----------------------------------------------------------
   
   sandbox_output <- function(war_tag) {
+    force(war_tag)
     renderPlot({
-      ind_input <- war_sandbox_ind_input(war_tag)
-      dep_input <- war_sandbox_dep_input(war_tag)
-      group_input <- war_sandbox_group_input(war_tag)
+      ind_input <- input[[war_sandbox_ind_ids[[war_tag]]]]
+      dep_input <- input[[war_sandbox_dep_ids[[war_tag]]]]
+      group_input <- input[[war_sandbox_group_ids[[war_tag]]]]
       war_dt <- (war_selection[[war_tag]])()
       plot_dep <- war_continuous[[war_tag]][[dep_input]]
       plot_group <- war_categorical[[war_tag]][[group_input]]
@@ -387,7 +367,7 @@ shinyServer(function(input, output, session) {
           guides(color = guide_legend(title = group_input)) + 
           geom_point() + 
           geom_smooth(method = 'lm')
-        if (war_hor_trans_input(war_tag) == "Logarithm") {
+        if (input[[war_transformation_hor_ids[[war_tag]]]] == "Logarithm") {
           sandbox_plot <- sandbox_plot + scale_x_log10()
         }
       } else {
@@ -412,7 +392,7 @@ shinyServer(function(input, output, session) {
         sandbox_plot <- sandbox_plot + 
           geom_violin(draw_quantiles = c(0.25, 0.50, 0.75))
       }
-      if (war_ver_trans_input(war_tag) == "Logarithm") {
+      if (input[[war_transformation_ver_ids[[war_tag]]]] == "Logarithm") {
         sandbox_plot <- sandbox_plot + scale_y_log10()
       }
       sandbox_plot + 
@@ -422,10 +402,9 @@ shinyServer(function(input, output, session) {
         theme_bw()
     })
   }
-  output$WW1_sandbox     <- sandbox_output(WW1)
-  output$WW2_sandbox     <- sandbox_output(WW2)
-  output$Korea_sandbox   <- sandbox_output(Korea)
-  output$Vietnam_sandbox <- sandbox_output(Vietnam)
+  for (tag in war_tags) {
+    output[[war_sandbox_ids[[tag]]]] <- sandbox_output(tag)
+  }
   
 
 ### Observers ---------------------------------------------------------------
@@ -497,20 +476,20 @@ shinyServer(function(input, output, session) {
   
   # general observer maker
   dropdown_observer <- function(type) {
-    observeEvent(eventExpr = dropdown_input(type), ignoreNULL = FALSE, ignoreInit = TRUE, handlerExpr = {
+    observeEvent(eventExpr = input[[type]], ignoreNULL = FALSE, ignoreInit = TRUE, handlerExpr = {
       debug_message0(type, "selected")
       if (change_token %c% previous_dropdown_selection[[type]]) {
         previous_dropdown_selection[[type]] <<- previous_dropdown_selection[[type]] %d% change_token
-        redraw()
+        redraw_tab(input$tabs)
         update_other_selectize_inputs(type)
       } else {
-        input <- dropdown_input(type)
-        if (is_empty(input)) {
+        this_input <- input[[type]]
+        if (is_empty(this_input)) {
           previous_dropdown_selection[[type]] <<- c("All", change_token)
           updateSelectizeInput(session, inputId = type, selected = "All")
         } else {
-          difference <- previous_dropdown_selection[[type]] %dd% input
-          selected <- length(input) > length(previous_dropdown_selection[[type]])
+          difference <- previous_dropdown_selection[[type]] %dd% this_input
+          selected <- length(this_input) > length(previous_dropdown_selection[[type]])
           if ("All" %c% previous_dropdown_selection[[type]]) {
             previous_dropdown_selection[[type]] <<- c(difference, change_token)
             updateSelectizeInput(session, inputId = type, selected = difference)
@@ -519,8 +498,8 @@ shinyServer(function(input, output, session) {
               previous_dropdown_selection[[type]] <<- c("All", change_token)
               updateSelectizeInput(session, inputId = type, selected = "All")
             } else {
-              previous_dropdown_selection[[type]] <<- input
-              redraw()
+              previous_dropdown_selection[[type]] <<- this_input
+              redraw_tab(input$tabs)
               update_other_selectize_inputs(type)
             }
           }
@@ -534,6 +513,11 @@ shinyServer(function(input, output, session) {
 
 ### Other observers ---------------------------------------------------------
 
+  # tab selection (redraw after switching back to a map tab)
+  observeEvent(eventExpr = input$tabs, ignoreNULL = TRUE, ignoreInit = TRUE, handlerExpr = {
+    redraw_tab(input$tabs)
+  })
+  
   # handler for sample size refresh
   observeEvent(eventExpr = input$sample_num, ignoreNULL = TRUE, ignoreInit = TRUE, handlerExpr = {
     debug_message("sample size changed")
@@ -543,7 +527,23 @@ shinyServer(function(input, output, session) {
   # handler for date range refresh
   observeEvent(eventExpr = input$dateRange, ignoreNULL = TRUE, ignoreInit = TRUE, handlerExpr = {
     debug_message("date range changed")
-    redraw()
+    redraw_tab(input$tabs)
+    if (animation_toggle()) {
+      if (input$dateRange[1] + animation_delta() < animation_end_date) {
+        Sys.sleep(animation_delays[[input$map_animate_delta]])
+        updateDateRangeInput(session, 
+                             inputId = "dateRange", 
+                             start = input$dateRange[1] + animation_delta(), 
+                             end = input$dateRange[2] + animation_delta())
+      } else {
+        Sys.sleep(animation_delays[[input$map_animate_delta]]*2)
+        animation_toggle(FALSE)
+        updateDateRangeInput(session, 
+                             inputId = "dateRange", 
+                             start = previous_start_date, 
+                             end = previous_end_date)
+      }
+    }
   })
   
   
@@ -552,45 +552,46 @@ shinyServer(function(input, output, session) {
   draw_overview_war <- function(war_tag) {
     function() {
       opacity <- calculate_opacity(min((war_missions_reactive[[war_tag]])(), input$sample_num), input$overview_map_zoom)
-      overview_proxy %>% addCircles(data = (war_sample[[war_tag]])(),
-                                    lat = ~Target_Latitude,
-                                    lng = ~Target_Longitude,
-                                    color = war_color[[war_tag]],
-                                    weight = point_weight, 
-                                    radius = {temp <- (war_sample[[war_tag]])()[["Damage_Radius"]]; pmax(temp, temp * 1e3 * 2 ** -input$overview_map_zoom)}, 
-                                    opacity = opacity,
-                                    fill = point_fill,
-                                    fillColor = war_color[[war_tag]],
-                                    fillOpacity = opacity,
-                                    popup = ~tooltip,
-                                    group = war_overview[[war_tag]])
+      overview_proxy_fast %>% addCircles(data = (war_sample[[war_tag]])(),
+                                         lat = ~Target_Latitude,
+                                         lng = ~Target_Longitude,
+                                         color = war_color[[war_tag]],
+                                         weight = point_weight, 
+                                         radius = {temp <- (war_sample[[war_tag]])()[["Damage_Radius"]]; 
+                                                   pmax(temp, temp * 1e3 * 2 ** -input$overview_map_zoom)}, 
+                                         opacity = opacity,
+                                         fill = point_fill,
+                                         fillColor = war_color[[war_tag]],
+                                         fillOpacity = opacity,
+                                         popup = ~tooltip,
+                                         group = war_overview[[war_tag]])
     }
   }
   war_draw_overview <- lapply(war_tags, draw_overview_war)
   
   clear_overview_war <- function(war_tag) {
     function() {
-      overview_proxy %>% clearGroup(group = war_overview[[war_tag]])
+      overview_proxy_fast %>% clearGroup(group = war_overview[[war_tag]])
     }
   }
   war_clear_overview <- lapply(war_tags, clear_overview_war)
   
   draw_civilian_war <- function(war_tag) {
     function() {
-      civilian_proxy %>% addHeatmap(data = (war_selection[[war_tag]])(), 
-                                    lng = ~Target_Longitude, 
-                                    lat = ~Target_Latitude, 
-                                    blur = civilian_blur, 
-                                    max = civilian_max, 
-                                    radius = civilian_radius, 
-                                    group = war_civilian[[war_tag]])
+      civilian_proxy_fast %>% addHeatmap(data = (war_selection[[war_tag]])(), 
+                                         lng = ~Target_Longitude, 
+                                         lat = ~Target_Latitude, 
+                                         blur = civilian_blur, 
+                                         max = civilian_max, 
+                                         radius = civilian_radius, 
+                                         group = war_civilian[[war_tag]])
     }
   }
   war_draw_civilian <- lapply(war_tags, draw_civilian_war)
   
   clear_civilian_war <- function(war_tag) {
     function() {
-      civilian_proxy %>% clearGroup(group = war_civilian[[war_tag]])
+      civilian_proxy_fast %>% clearGroup(group = war_civilian[[war_tag]])
     }
   }
   war_clear_civilian <- lapply(war_tags, clear_civilian_war)
@@ -667,8 +668,17 @@ shinyServer(function(input, output, session) {
   }
   
   redraw <- function() {
+    debug_message("redrew")
     for (tag in war_tags) {
       if ((war_selected[[tag]])()) (war_redraw[[tag]])()
+    }
+  }
+  
+  redraw_tab <- function(tab) {
+    if (tab == "overview") {
+      redraw_overview()
+    } else if (tab == "civilian") {
+      redraw_civilian()
     }
   }
   
@@ -745,73 +755,46 @@ shinyServer(function(input, output, session) {
     function() {
       debug_message0(type, "choices updated")
       choices <- c("All", possible_selectize_choices(dropdowns[[type]]))
-      input <- dropdown_input(type)
-      matches <- input %in% choices
-      if (any(matches)) {
-        selected <- input[matches]
-      } else {
-        selected <- "All"
-      }
+      this_input <- input[[type]]
       updateSelectizeInput(session, 
                            inputId = type, 
                            choices = choices, 
-                           selected = selected)
+                           selected = this_input %whichin% choices %OR% "All")
     }
   }
-  update_regions <- update_dropdown('regions')
-  update_targets <- update_dropdown('targets')
-  update_countries <- update_dropdown('countries')
-  update_aircrafts <- update_dropdown('aircrafts')
-  update_weapons   <- update_dropdown('weapons')
-  # update_dropdowns <- lapply(dropdown_tags, update_dropdown)
+  update_dropdowns <- lapply(dropdown_tags, update_dropdown)
   
   update_selectize_inputs <- function() {
-    update_regions()
-    update_targets()
-    update_countries()
-    update_aircrafts()
-    update_weapons()
-    # walk(update_dropdowns, 
-    #      ~(.)())
+    walk(update_dropdowns,
+         ~(.)())
   }
   
   update_other_selectize_inputs <- function(changed) {
-    switch(changed, 
-           regions   = {update_targets()
-                        update_countries()
-                        update_aircrafts()
-                        update_weapons()}, 
-           targets   = {update_regions()
-                        update_countries()
-                        update_aircrafts()
-                        update_weapons()}, 
-           countries = {update_regions()
-                        update_targets()
-                        update_aircrafts()
-                        update_weapons()},
-           aircrafts = {update_regions()
-                        update_targets()
-                        update_countries()
-                        update_weapons()},
-           weapons   = {update_regions()
-                        update_targets()
-                        update_countries()
-                        update_aircrafts()})
-    # walk(update_dropdowns[dropdown_tags != changed], 
-    #      ~(.)())
+    walk(update_dropdowns[dropdown_tags != changed],
+         ~(.)())
   }
   
 
 ### Filtering Functions -----------------------------------------------------
 
+  selected_war_levels <- function(column) {
+    possible_levels <- c()
+    for (tag in war_tags) {
+      if ((war_selected[[tag]])()) {
+        possible_levels <- c(possible_levels, levels(war_data[[tag]][[column]]))
+      }
+    }
+    return (possible_levels)
+  }
+  
   possible_selectize_choices <- function(column) {
     start_date <- input$dateRange[1]
     end_date   <- input$dateRange[2]
-    regions    <- input$regions
-    targets    <- input$targets
-    countries  <- input$countries
-    aircrafts  <- input$aircrafts
-    weapons    <- input$weapons
+    regions    <- input$regions %whichin% c("All", selected_war_levels("Target_Country")) %OR% "All"
+    targets    <- input$targets %whichin% c("All", selected_war_levels("Target_Category")) %OR% "All"
+    countries  <- input$countries %whichin% c("All", selected_war_levels("Unit_Country")) %OR% "All"
+    aircrafts  <- input$aircrafts %whichin% c("All", selected_war_levels("Aircraft_Type")) %OR% "All"
+    weapons    <- input$weapons %whichin% c("All", selected_war_levels("Weapon_Type")) %OR% "All"
     switch(column, 
            "Target_Country"  = {regions   <- "All"}, 
            "Target_Category" = {targets   <- "All"}, 
@@ -821,18 +804,14 @@ shinyServer(function(input, output, session) {
     multi_selectors <- list(regions, targets, countries, aircrafts, weapons)
     selectors <- c(list(start_date, end_date), multi_selectors)
     re_name(selectors, c("start_date", "end_date", dropdown_tags))
-    result <- c()
-    if (all(multi_selectors == "All")) {
-      for (tag in war_tags) {
-        if ((war_selected[[tag]])()) {
-          result <- append(result, levels(war_data[[tag]][[column]]))
-        }
-      }
+    if (all(multi_selectors %in% "All")) {
+      result <- selected_war_levels(column)
     } else {
+      result <- c()
       for (tag in war_tags) {
         if ((war_selected[[tag]])()) {
           arg_list <- list("war_tag" = tag, "column" = column, "criteria" = selectors)
-          result <- append(result, do.call(unique_from_filter, arg_list))
+          result <- c(result, do.call(unique_from_filter, arg_list))
         }
       }
     }
@@ -860,27 +839,27 @@ shinyServer(function(input, output, session) {
             if ("All" %c% weapons) {
               war_dt <- war_data[[war_tag]]
             } else {
-              war_dt <- war_data[[war_tag]][.(weapons), on = .(Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(weapons), on = .(Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(aircrafts), on = .(Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(aircrafts), on = .(Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(aircrafts, weapons), on = .(Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(aircrafts, weapons), on = .(Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         } else {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(countries), on = .(Unit_Country)]
+              war_dt <- war_data[[war_tag]][.(countries), on = .(Unit_Country), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(countries, weapons), on = .(Unit_Country, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(countries, weapons), on = .(Unit_Country, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(countries, aircrafts), on = .(Unit_Country, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(countries, aircrafts), on = .(Unit_Country, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(countries, aircrafts, weapons), on = .(Unit_Country, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(countries, aircrafts, weapons), on = .(Unit_Country, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         }
@@ -888,29 +867,29 @@ shinyServer(function(input, output, session) {
         if ("All" %c% countries) {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(targets), on = .(Target_Category)]
+              war_dt <- war_data[[war_tag]][.(targets), on = .(Target_Category), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(targets, weapons), on = .(Target_Category, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(targets, weapons), on = .(Target_Category, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(targets, aircrafts), on = .(Target_Category, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(targets, aircrafts), on = .(Target_Category, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(targets, aircrafts, weapons), on = .(Target_Category, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(targets, aircrafts, weapons), on = .(Target_Category, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         } else {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(targets, countries), on = .(Target_Category, Unit_Country)]
+              war_dt <- war_data[[war_tag]][.(targets, countries), on = .(Target_Category, Unit_Country), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(targets, countries, weapons), on = .(Target_Category, Unit_Country, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(targets, countries, weapons), on = .(Target_Category, Unit_Country, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(targets, countries, aircrafts), on = .(Target_Category, Unit_Country, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(targets, countries, aircrafts), on = .(Target_Category, Unit_Country, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(targets, countries, aircrafts, weapons), on = .(Target_Category, Unit_Country, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(targets, countries, aircrafts, weapons), on = .(Target_Category, Unit_Country, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         }
@@ -920,29 +899,29 @@ shinyServer(function(input, output, session) {
         if ("All" %c% countries) {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions), on = .(Target_Country)]
+              war_dt <- war_data[[war_tag]][.(regions), on = .(Target_Country), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, weapons), on = .(Target_Country, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, weapons), on = .(Target_Country, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, aircrafts), on = .(Target_Country, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, aircrafts), on = .(Target_Country, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, aircrafts, weapons), on = .(Target_Country, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, aircrafts, weapons), on = .(Target_Country, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         } else {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, countries), on = .(Target_Country, Unit_Country)]
+              war_dt <- war_data[[war_tag]][.(regions, countries), on = .(Target_Country, Unit_Country), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, countries, weapons), on = .(Target_Country, Unit_Country, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, countries, weapons), on = .(Target_Country, Unit_Country, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, countries, aircrafts), on = .(Target_Country, Unit_Country, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, countries, aircrafts), on = .(Target_Country, Unit_Country, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, countries, aircrafts, weapons), on = .(Target_Country, Unit_Country, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, countries, aircrafts, weapons), on = .(Target_Country, Unit_Country, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         }
@@ -950,29 +929,29 @@ shinyServer(function(input, output, session) {
         if ("All" %c% countries) {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, targets), on = .(Target_Country, Target_Category)]
+              war_dt <- war_data[[war_tag]][.(regions, targets), on = .(Target_Country, Target_Category), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, targets, weapons), on = .(Target_Country, Target_Category, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, weapons), on = .(Target_Country, Target_Category, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, targets, aircrafts), on = .(Target_Country, Target_Category, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, aircrafts), on = .(Target_Country, Target_Category, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, targets, aircrafts, weapons), on = .(Target_Country, Target_Category, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, aircrafts, weapons), on = .(Target_Country, Target_Category, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         } else {
           if ("All" %c% aircrafts) {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, targets, countries), on = .(Target_Country, Target_Category, Unit_Country)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, countries), on = .(Target_Country, Target_Category, Unit_Country), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, targets, countries, weapons), on = .(Target_Country, Target_Category, Unit_Country, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, countries, weapons), on = .(Target_Country, Target_Category, Unit_Country, Weapon_Type), nomatch = 0L]
             }
           } else {
             if ("All" %c% weapons) {
-              war_dt <- war_data[[war_tag]][.(regions, targets, countries, aircrafts), on = .(Target_Country, Target_Category, Unit_Country, Aircraft_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, countries, aircrafts), on = .(Target_Country, Target_Category, Unit_Country, Aircraft_Type), nomatch = 0L]
             } else {
-              war_dt <- war_data[[war_tag]][.(regions, targets, countries, aircrafts, weapons), on = .(Target_Country, Target_Category, Unit_Country, Aircraft_Type, Weapon_Type)]
+              war_dt <- war_data[[war_tag]][.(regions, targets, countries, aircrafts, weapons), on = .(Target_Country, Target_Category, Unit_Country, Aircraft_Type, Weapon_Type), nomatch = 0L]
             }
           }
         }

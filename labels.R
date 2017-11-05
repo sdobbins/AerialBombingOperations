@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Overview Tab ------------------------------------------------------------
@@ -221,9 +221,6 @@ commander_maps_ids <- list(WW1     = paste0("commander_map_", WW1, c("_1", "_2")
                            WW2     = paste0("commander_map_", WW2, c("_1", "_2")), 
                            Korea   = paste0("commander_map_", Korea, c("_1", "_2")), 
                            Vietnam = paste0("commander_map_", Vietnam, c("_1", "_2")))
-# for (tag in war_tags) {
-#   commander_maps_ids <- append(commander_maps_ids, paste0("commander_map_", tag, c("_1", "_2")))
-# }
 
 
 ### Lookup Tables -----------------------------------------------------------
@@ -235,7 +232,7 @@ war_continuous_choices <- list(WW1_continuous_choices, WW2_continuous_choices, K
 war_all_choices <- list(WW1_all_choices, WW2_all_choices, Korea_all_choices, Vietnam_all_choices)
 
 
-### Graph Titles ------------------------------------------------------------
+### Graphs ------------------------------------------------------------------
 
 WW1_histogram_title <- "World War One Histogram"
 WW2_histogram_title <- "World War Two Histogram"
@@ -248,6 +245,16 @@ WW2_sandbox_title <- "World War Two Sandbox"
 Korea_sandbox_title <- "Korean War Sandbox"
 Vietnam_sandbox_title <- "Vietnam War Sandbox"
 war_sandbox_title <- c(WW1_sandbox_title, WW2_sandbox_title, Korea_sandbox_title, Vietnam_sandbox_title)
+
+war_hist_ids <- paste0("hist_", war_tags)
+war_sandbox_ids <- paste0("sandbox_", war_tags)
+
+war_sandbox_group_ids <- paste0(war_tags, "_sandbox_group")
+war_sandbox_ind_ids <- paste0(war_tags, "_sandbox_ind")
+war_sandbox_dep_ids <- paste0(war_tags, "_sandbox_dep")
+war_hist_slider_ids <- paste0(war_tags, "_hist_slider")
+war_transformation_hor_ids <- paste0(war_tags, "_transformation_hor")
+war_transformation_ver_ids <- paste0(war_tags, "_transformation_ver")
 
 
 ### Map Layers --------------------------------------------------------------
@@ -278,7 +285,7 @@ walk(list(war_labels,
           war_min_bins, 
           war_max_bins, 
           war_videos, 
-          war_video_descrptions, 
+          war_video_descriptions, 
           war_video_description_phrases, 
           war_maps, 
           war_maps_descriptions, 
@@ -297,6 +304,14 @@ walk(list(war_labels,
           war_all_choices, 
           war_histogram_title, 
           war_sandbox_title, 
+          war_hist_ids, 
+          war_sandbox_ids, 
+          war_sandbox_group_ids, 
+          war_sandbox_ind_ids, 
+          war_sandbox_dep_ids, 
+          war_hist_slider_ids, 
+          war_transformation_hor_ids, 
+          war_transformation_ver_ids, 
           war_overview, 
           war_civilian), 
      ~re_name(., war_tags))

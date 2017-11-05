@@ -1,16 +1,16 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Save Data ---------------------------------------------------------------
 
-debug_message("saving cleaned bomb data")
-for (war_data_tag in war_data_tags) {
-  fwrite(bomb_data[[war_data_tag]], 
-         file = war_bombs_filepath[[war_data_tag]], 
-         quote = TRUE)
-}
+# debug_message("saving cleaned bomb data")
+# for (war_data_tag in war_data_tags) {
+#   fwrite(bomb_data[[war_data_tag]], 
+#          file = war_bombs_filepath[[war_data_tag]], 
+#          quote = TRUE)
+# }
 
 debug_message("saving processed clean data")
 for (war_data_tag in war_data_tags) {

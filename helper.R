@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Local Values ------------------------------------------------------------
@@ -58,26 +58,26 @@ months <- c("January" = 1L,
             "November" = 11L, 
             "December" = 12L)
 
-visibility_categorizations <- c("good" = "good|clear|excellent|undercast", 
-                                "poor" = "poor|clouds|overcast", 
-                                "fair" = "fair|layers|scattered", 
-                                "poor" = "very")
+visibility_categorizations <- c("good" = any_of(c("good", "clear", "excellent", "undercast")), 
+                                "poor" = any_of(c("poor", "clouds", "overcast")), 
+                                "fair" = any_of(c("fair", "layers", "scattered")), 
+                                "poor" = any_of(c("very")))
 
-target_categorizations <- c("town"           = "town|business|city|house|huts|market|monastery|town|urban|village", 
-                            "factory"        = "factory|assembly|blast|construction|engine|furnace|gasoline|hydroelectric|manufacturing|plant|power|refinery|works", 
-                            "airfield"       = "airfield|airdrome|runway", 
-                            "aircraft"       = "aircraft|airframes|mig|seaplanes", 
-                            "headquarters"   = "communications|compound|facility|government|headquarters|management", 
-                            "defenses"       = "defenses|anti-aircraft|battery|defensive|emplacement|gun|installation|pillbox|tower", 
-                            "base"           = "base|aresenal|barracks|buildings|camp", 
-                            "harbor"         = "harbor|barges|boats|coastal|dock|ferry|jetty|shipyard|vessels|waterfront|wharf", 
-                            "munitions"      = "munitions|ammunition|explosives|ordinances", 
-                            "infrastructure" = "bridge|canal|river crossing|tunnel", 
-                            "rail"           = "rail|junction|marshalling|railroad|railway|station|trains|yard", 
-                            "road"           = "road|highway|locomotives|transportation|trucks|vehicles", 
-                            "supplies"       = "supplies|depot|dump|equipment|rations|shipping|storage|warehouse", 
-                            "troops"         = "troops|artillery|concentration|enemy|japanese|moving target|personnel|support", 
-                            "area"           = "area|hill|location|place|point|position|tactical|target")
+target_categorizations <- c("town"           = any_of(c("town", "business", "city", "house", "huts", "market", "monastery", "town", "urban", "village")), 
+                            "factory"        = any_of(c("factory", "assembly", "blast", "construction", "engine", "furnace", "gasoline", "hydroelectric", "manufacturing", "plant", "power", "refinery", "works")), 
+                            "airfield"       = any_of(c("airfield", "airdrome", "runway")), 
+                            "aircraft"       = any_of(c("aircraft", "airframes", "mig", "seaplanes")), 
+                            "headquarters"   = any_of(c("communications", "compound", "facility", "government", "headquarters", "management")), 
+                            "defenses"       = any_of(c("defenses", "anti-aircraft", "battery", "defensive", "emplacement", "gun", "installation", "pillbox", "tower")), 
+                            "base"           = any_of(c("base", "aresenal", "barracks", "buildings", "camp")), 
+                            "harbor"         = any_of(c("harbor", "barges", "boats", "coastal", "dock", "ferry", "jetty", "shipyard", "vessels", "waterfront", "wharf")), 
+                            "munitions"      = any_of(c("munitions", "ammunition", "explosives", "ordinances")), 
+                            "infrastructure" = any_of(c("bridge", "canal", "river crossing", "tunnel")), 
+                            "rail"           = any_of(c("rail", "junction", "marshalling", "railroad", "railway", "station", "trains", "yard")), 
+                            "road"           = any_of(c("road", "highway", "locomotives", "transportation", "trucks", "vehicles")), 
+                            "supplies"       = any_of(c("supplies", "depot", "dump", "equipment", "rations", "shipping", "storage", "warehouse")), 
+                            "troops"         = any_of(c("troops", "artillery", "concentration", "enemy", "japanese", "moving target", "personnel", "support")), 
+                            "area"           = any_of(c("area", "hill", "location", "place", "point", "position", "tactical", "target")))
 
 target_city_rules <- c(            "\\?", 
                                    "\\b[\\d.-]+\\b", 
@@ -96,6 +96,7 @@ target_rules <- c(                        "/?ETC",
                                           "\\d+ | \\d+", 
                   " "                   = " +-? *", 
                   ", "                  = " , ?", 
+                  "ACKNOWLEDGED"        = "\\b(ACK)\\b", 
                   "ADMINISTRATIVE"      = "\\b(ADM?(IN[A-Z]*)?)\\b", 
                   "AIRCRAFT"            = "\\b(AC|A C)(RFT)?\\b", 
                   "AIRCRAFT FACTORY"    = "\\b(A FACTORY|A ?F)\\b", 
@@ -154,7 +155,7 @@ target_rules <- c(                        "/?ETC",
                   "GUN"                 = "\\b(GUM)\\b", 
                   "GUN POSITION"        = "\\b(G P|G POSITION)\\b", 
                   "HARBOR"              = "\\b(HARBDR|HARBOURS?|HARBORS)\\b", 
-                  "HEADQUARTERS"        = "\\b(HDOS?|HDQR?S?|H ?Q ?S?|HEADQUARTER)\\b", 
+                  "HEADQUARTERS"        = "\\b(HDOS?|HD?QR?S?|H ?Q ?S?|HEADQUARTER)\\b", 
                   "HEAVY"               = "\\b(HVY)\\b", 
                   "HIGHWAY"             = "\\b(HWY?S?|HTGHWAYS?|HIWAYS?|HIGHWAYS)\\b", 
                   "HILL"                = "\\b(HILLSIDE|HILLS)\\b", 
@@ -181,7 +182,7 @@ target_rules <- c(                        "/?ETC",
                   "MONASTERY"           = "\\b(MONASTARY)\\b", 
                   "MOVING TARGET"       = "\\b(MT)\\b", 
                   "MUNITIONS"           = "\\b(MUNITION)\\b", 
-                  "ORDINANCES"           = "\\b(ORD|ORDINANCE)\\b", 
+                  "ORDINANCES"          = "\\b(ORD|ORDINANCE)\\b", 
                   "PARK/STOP"           = "\\b(PRK[ /]ST)\\b", 
                   "PARK"                = "\\b(PRK)\\b", 
                   "PERSONNEL"           = "\\b(PERONN?EL|PERSONN[A-Z]*)\\b", 
@@ -197,7 +198,7 @@ target_rules <- c(                        "/?ETC",
                   "RAILROAD"            = "\\b(R ?R|HAILROAD|RAIL ROAD|RAILROADS)\\b", 
                   "RAILWAY"             = "\\b(RLWY|RAILWAYS)\\b", 
                   "RATIONS"             = "\\b(RATION)\\b", 
-                  "RED"                 = "\\bRED[A-Z]*", 
+                  "RED"                 = "\\bRED[A-Z]*", #??
                   "REFINERY"            = "\\b(REF)\\b", 
                   "REPORTED"            = "\\b(RPTD)\\b", 
                   "RIVER CROSSING"      = "\\b(RIV[A-Z]* CR[A-Z]*|RIV[A-Z]* CROSS NG)\\b", 

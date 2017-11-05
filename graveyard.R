@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.8.1
-# @date 2017-08-15 21:00
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 ### Code Graveyard ###
 # where buggy or formerly useful but now unnecessary code lays to rest
@@ -2435,5 +2435,364 @@ civilian_title <- function() {
                    inline = FALSE))
   )
 }
+
+fill_matching_values2 <- function(data, fact_col, code_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, numeric_code = TRUE, extra.codes = 'reduce') {
+    fact_colname <- deparse(substitute(fact_col))
+    code_colname <- deparse(substitute(code_col))
+    lookup_table <- eval(parse(text = paste0("data[", fact_colname, " != '', .(", code_colname, ", ", fact_colname, ")][!is.na(", code_colname, "), data.table::first(", fact_colname, "), keyby = ", code_colname, "]")))
+    setnames(lookup_table, c(code_colname, "V1"), c("codes", "values"))
+    if (numeric_code) {
+      dropped_code <- NA
+    } else {
+      dropped_code <- ""
+    }
+    all_codes <- drop_NA(unique(data[[code_colname]]))
+    verified_codes <- lookup_table[["codes"]]
+    for (code in all_codes) {#*** this is slightly better than original
+      if (code %c% verified_codes) {
+        replacement <- lookup_table[codes == code, ][["values"]]
+      } else {
+        replacement <- dropped_code
+      }
+      set(data, i = which(data[[code_colname]] == code), j = code_colname, replacement)
+    }
+    drop_missing_levels(data[[fact_colname]])
+    if (backfill) {
+      all_values <- levels(data[[fact_colname]]) %[!=]% ""
+      verified_values <- lookup_table[["values"]]
+      for (value in all_values) {#*** this is much worse than original
+        if (value %c% verified_values) {
+          replacement <- lookup_table[values == value, ][["codes"]]
+          if (is_plural(replacement)) {
+            if (extra.codes == 'reduce') {
+              if (numeric_code) {
+                sub_data <- eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", tabulate(', code_colname, ")]")))
+              } else {
+                sub_data <- eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", tabulate_factor(', code_colname, ")]")))#*** may not be factor (character instead)
+              }
+              if (numeric_code) {
+                best_code <- which.max(sub_data)
+              } else {
+                best_code <- levels(data)[which.max(sub_data)]
+              }
+              other_codes <- replacement %d% best_code
+              for (other_code in other_codes) {
+                set(data, i = which(data[[code_colname]] == other_code), j = code_colname, best_code)
+              }
+              replacement <- best_code
+            } else if (extra.codes == 'recycle') {
+              replacement <- rep_len(replacement, eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", .N]'))))
+            }
+          }
+          eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", ', code_colname, " := replacement]")))
+        } else if (drop.values) {
+          eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", ', fact_colname, ' := ""]')))
+        }
+        #   set(data, i = which(data[[fact_colname]] == value), j = code_colname, replacement)
+        # } else if (drop.values) {
+        #   set(data, i = which(data[[fact_colname]] == value), j = fact_colname, "")
+        # }
+      }
+    }
+    invisible(data)
+  }
+}
+
+fill_matching_values2 <- function(data, fact_col, code_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, numeric_code = TRUE) {
+    fact_colname <- deparse(substitute(fact_col))
+    code_colname <- deparse(substitute(code_col))
+    code_to_values <- eval(parse(text = paste0("data[", fact_colname, " != '', .('codes' = ", code_colname, ", 'values' = ", fact_colname, ")]")))[!is.na(codes), .('values' = unique(values)), keyby = codes][, .(values, 'GRPN' = .N), keyby = codes]
+    indeterminate_codes <- code_to_values[GRPN > 1L, (unique(codes))]
+    for (a_code in indeterminate_codes) {
+      present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_colname, " == a_code, ", fact_colname, "]"))))
+      replace_levels(data[[fact_colname]], from = present_levels[["others"]], to = present_levels[["mode"]])
+      replace_levels(code_to_values[["values"]], from = present_levels[["others"]], to = present_levels[["mode"]])
+    }
+    code_to_values <- unique(code_to_values[, .(codes, values)])
+    if (drop.codes) {
+      all_codes <- drop_NA(unique(data[[code_colname]]))
+      verified_codes <- code_to_values[["codes"]]
+      unverified_codes <- all_codes %d% verified_codes
+      for (bad_code in unverified_codes) {
+        eval(parse(text = paste0("data[", code_colname, " == bad_code, ", code_colname, " := NA_integer_]")))
+      }
+    }
+    value_to_codes <- eval(parse(text = paste0("data[!is.na(", code_colname, "), .('values' = ", fact_colname, ", 'codes' = ", code_colname, ")]")))[values != '', .('codes' = unique(codes)), keyby = values][, .(codes, 'GRPN' = .N), keyby = values]
+    indeterminate_values <- value_to_codes[GRPN > 1L, (unique(values))]
+    for (a_value in indeterminate_values) {
+      best_code <- eval(parse(text = paste0("data[", fact_colname, " == a_value, mode(", code_colname, ")]")))
+      if (backfill) {
+        eval(parse(text = paste0("data[", fact_colname, " == a_value, ", code_colname, " := best_code]")))
+      }
+      value_to_codes[values == a_value, codes := best_code]
+    }
+    value_to_codes <- unique(value_to_codes[, .(values, codes)])
+    if (drop.values) {
+      all_values <- unique(data[[fact_colname]]) %[!=]% ''
+      verified_values <- value_to_codes[["values"]]
+      unverified_values <- all_values %d% verified_values
+      drop_levels(data[[fact_colname]], drop = unverified_values)
+    }
+    invisible(data)
+  }
+
+fill_matching_values <- function(data, fact_col, code_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, numeric_code = TRUE, extra.codes = 'reduce') {
+    fact_colname <- deparse(substitute(fact_col))
+    code_colname <- deparse(substitute(code_col))
+    lookup_table <- eval(parse(text = paste0("data[", fact_colname, " != '', .(", code_colname, ", ", fact_colname, ")][!is.na(", code_colname, "), data.table::first(", fact_colname, "), keyby = ", code_colname, "]")))
+    setnames(lookup_table, c("V1"), c(fact_colname))
+    all_codes <- drop_NA(unique(data[[code_colname]]))
+    verified_codes <- lookup_table[["codes"]]
+    for (code in all_codes) {#*** for all codes: if verified, fill in chosen value for each code; if not, drop the code to missing
+      if (code %c% verified_codes) {
+        replacement <- lookup_table[codes == code, ][["values"]]
+        eval(parse(text = paste0("data[", code_colname, " == ", as.character(code), ", ", fact_colname, " := replacement]")))
+      } else if (drop.codes) {
+        if (numeric_code) {
+          eval(parse(text = paste0("data[", code_colname, " == ", as.character(code), ", ", code_colname, " := NA]")))
+        } else {
+          eval(parse(text = paste0("data[", code_colname, ' == "', as.character(code), '", ', code_colname, ' := ""]')))
+        }
+      }
+    }
+    drop_missing_levels(data[[fact_colname]])
+    if (backfill) {
+      all_values <- levels(data[[fact_colname]]) %[!=]% ""
+      verified_values <- lookup_table[["values"]]
+      for (value in all_values) {
+        if (value %c% verified_values) {
+          replacement <- lookup_table[values == value, ][["codes"]]
+          if (is_plural(replacement)) {
+            if (extra.codes == 'reduce') {
+              if (numeric_code) {
+                sub_data <- eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", tabulate(', code_colname, ")]")))
+              } else {
+                sub_data <- eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", tabulate_factor(', code_colname, ")]")))#*** may not be factor (character instead)
+              }
+              if (numeric_code) {
+                best_code <- which.max(sub_data)
+              } else {
+                best_code <- levels(data)[which.max(sub_data)]
+              }
+              other_codes <- replacement %d% best_code
+              for (other_code in other_codes) {
+                if (numeric_code) {
+                  eval(parse(text = paste0("data[", code_colname, " == ", as.character(other_code), ", ", code_colname, " := ", as.character(best_code), "]")))
+                } else {
+                  eval(parse(text = paste0("data[", code_colname, ' == "', as.character(other_code), '", ', code_colname, ' := "', as.character(best_code), '"]')))
+                }
+              }
+              replacement <- best_code
+            } else if (extra.codes == 'recycle') {
+              replacement <- rep_len(replacement, eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", .N]'))))
+            }
+          }
+          eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", ', code_colname, " := replacement]")))
+        } else if (drop.values) {
+          eval(parse(text = paste0("data[", fact_colname, ' == "', as.character(value), '", ', fact_colname, ' := ""]')))
+        }
+      }
+    }
+    invisible(data)
+  }
+
+for (code in verified_codes) {
+      set(data, i = which(data[[code_colname]] == code), j = fact_colname, code_to_values[codes == code, (values)])
+    }
+
+for (value in verified_values) {
+        set(data, i = which(data[[fact_colname]] == value), j = code_colname, value_to_codes[values == value, (codes)])
+      }
+
+if (is.na(NA_level_fact)) {
+      NA_index <- which(is.na(levels(data[[fact_colname]])))
+      code_to_values <- eval(parse(text = paste0("data[as.integer(", fact_colname, ") != ", as.character(NA_index), "L, .('codes' = ", code_colname, ", 'values' = ", fact_colname, ")]")))
+    } else {
+      code_to_values <- eval(parse(text = paste0("data[", fact_colname, " != '", NA_level_fact, "', .('codes' = ", code_colname, ", 'values' = ", fact_colname, ")]")))
+    }
+
+if (is.na(NA_level_code)) {
+      NA_index <- which(is.na(levels(data[[code_colname]])))
+      code_to_values <- unique(code_to_values[as.integer(codes) != NA_index, ])
+    } else {
+      code_to_values <- unique(code_to_values[codes != NA_level_code, ])
+    }
+
+if (is.na(NA_level_fact)) {
+      NA_index <- which(is.na(levels(data[[fact_colname]])))
+      if (assume.exclusive) {
+        for (a_code in indeterminate_codes) {
+          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_colname, " == a_code & as.integer(", fact_colname, ") != ", as.character(NA_index), "L, ", fact_colname, "]"))))
+          replace_levels(code_to_values[["values"]], from = present_levels[["others"]], to = present_levels[["mode"]])
+        }
+      } else {
+        for (a_code in indeterminate_codes) {
+          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_colname, " == a_code & as.integer(", fact_colname, ") != ", as.character(NA_index), "L, ", fact_colname, "]"))))
+          set(code_to_values, i = which(code_to_values[["codes"]] == a_code), j = "values", present_levels[["mode"]])
+        }
+      }
+    } else {
+      if (assume.exclusive) {
+        for (a_code in indeterminate_codes) {
+          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_colname, " == a_code & ", fact_colname, ' != "', NA_level_fact, '", ', fact_colname, "]"))))
+          replace_levels(code_to_values[["values"]], from = present_levels[["others"]], to = present_levels[["mode"]])
+        }
+      } else {
+        for (a_code in indeterminate_codes) {
+          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_colname, " == a_code & ", fact_colname, ' != "', NA_level_fact, '", ', fact_colname, "]"))))
+          set(code_to_values, i = which(code_to_values[["codes"]] == a_code), j = "values", present_levels[["mode"]])
+        }
+      }
+    }
+
+if (is.na(NA_level_code)) {
+        NA_index <- which(is.na(levels(data[[code_colname]])))
+        all_codes <- unique(data[[code_colname]] %[]% (as.integer(.) != NA_index))
+      } else {
+        all_codes <- unique(data[[code_colname]] %[!=]% NA_level_code)
+      }
+
+if (is.na(NA_level_code)) {
+      NA_index <- which(is.na(levels(data[[code_colname]])))
+      slicer <- as.integer(data[[code_colname]]) != NA_index
+    } else {
+      slicer <- data[[code_colname]] != NA_level_code
+    }
+
+if (is.na(NA_level_code)) {
+        NA_index <- which(is.na(levels(data[[code_colname]])))
+        value_to_codes <- eval(parse(text = paste0("data[as.integer(", code_colname, ") != ", as.character(NA_index), "L, .('values' = ", fact_colname, ", 'codes' = ", code_colname, ")]")))
+      } else {
+        value_to_codes <- eval(parse(text = paste0("data[", code_colname, " != '", NA_level_code, "', .('values' = ", fact_colname, ", 'codes' = ", code_colname, ")]")))
+      }
+      if (is.na(NA_level_fact)) {
+        NA_index <- which(is.na(levels(data[[fact_colname]])))
+        value_to_codes <- unique(value_to_codes[as.integer(values) != NA_index, ])
+      } else {
+        value_to_codes <- unique(value_to_codes[values != NA_level_fact, ])
+      }
+
+WW2_bombs %>%
+  fill_matching_values(Target_Country,  Target_Country_Code,  drop.codes = TRUE, backfill = TRUE) %>%
+  fill_matching_values(Target_City,     Target_City_Code,     drop.codes = TRUE, backfill = TRUE) %>%
+  fill_matching_values(Target_Industry, Target_Industry_Code, drop.codes = TRUE, backfill = TRUE) %>%
+  fill_matching_values(Target_Priority, Target_Priority_Code, drop.codes = TRUE, backfill = TRUE) %>%
+  fill_matching_values(Sighting_Method, Sighting_Method_Code, drop.codes = TRUE, backfill = TRUE)
+
+  output$map_animate_text <- renderText({
+    if (animation_toggle() && input$dateRange[1] != previous_start_date) {
+      switch(input$map_animate_delta,
+             "year"  = {as.character(lubridate::year(input$dateRange[1]))},
+             "month" = {paste(lubridate::month(input$dateRange[1], label = TRUE), as.character(lubridate::year(input$dateRange[1])))},
+             "week"  = {as.character(input$dateRange[1])})
+    } else {
+      "..."
+    }
+  })
+
+
+flush_irrelevant_selectize_choices <- function() {
+    irrelevant_regions <- input$regions %!in% selected_war_levels("Target_Country")
+    irrelevant_targets <- input$targets %!in% selected_war_levels("Target_Category")
+    irrelevant_countries <- input$countries %!in% selected_war_levels("Unit_Country")
+    irrelevant_aircrafts <- input$aircrafts %!in% selected_war_levels("Aircraft_Type")
+    irrelevant_weapons <- input$weapons %!in% selected_war_levels("Weapon_Type")
+    updateSelectizeInput(session, inputId = "regions", choices = input$regions %[!=]% irrelevant_regions)
+    updateSelectizeInput(session, inputId = "targets", choices = input$targets %[!=]% irrelevant_targets)
+    updateSelectizeInput(session, inputId = "countries", choices = input$countries %[!=]% irrelevant_countries)
+    updateSelectizeInput(session, inputId = "aircrafts", choices = input$aircrafts %[!=]% irrelevant_aircrafts)
+    updateSelectizeInput(session, inputId = "weapons", choices = input$weapons %[!=]% irrelevant_weapons)
+  }
+
+  update_regions   <- update_dropdown('regions')
+  update_targets   <- update_dropdown('targets')
+  update_countries <- update_dropdown('countries')
+  update_aircrafts <- update_dropdown('aircrafts')
+  update_weapons   <- update_dropdown('weapons')
+
+    update_regions()
+    update_targets()
+    update_countries()
+    update_aircrafts()
+    update_weapons()
+
+    switch(changed,
+           regions   = {update_targets()
+                        update_countries()
+                        update_aircrafts()
+                        update_weapons()},
+           targets   = {update_regions()
+                        update_countries()
+                        update_aircrafts()
+                        update_weapons()},
+           countries = {update_regions()
+                        update_targets()
+                        update_aircrafts()
+                        update_weapons()},
+           aircrafts = {update_regions()
+                        update_targets()
+                        update_countries()
+                        update_weapons()},
+           weapons   = {update_regions()
+                        update_targets()
+                        update_countries()
+                        update_aircrafts()})
+
+### Data Graph Inputs -------------------------------------------------------
+  
+  war_sandbox_group_input <- function(war_tag) {
+    switch(war_tag,
+           WW1     = input$WW1_sandbox_group,
+           WW2     = input$WW2_sandbox_group,
+           Korea   = input$Korea_sandbox_group,
+           Vietnam = input$Vietnam_sandbox_group)
+  }
+
+  war_sandbox_ind_input <- function(war_tag) {
+    switch(war_tag,
+           WW1     = input$WW1_sandbox_ind,
+           WW2     = input$WW2_sandbox_ind,
+           Korea   = input$Korea_sandbox_ind,
+           Vietnam = input$Vietnam_sandbox_ind)
+  }
+
+  war_sandbox_dep_input <- function(war_tag) {
+    switch(war_tag,
+           WW1     = input$WW1_sandbox_dep,
+           WW2     = input$WW2_sandbox_dep,
+           Korea   = input$Korea_sandbox_dep,
+           Vietnam = input$Vietnam_sandbox_dep)
+  }
+
+  war_hist_slider_input <- function(war_tag) {
+    switch(war_tag,
+           WW1     = input$WW1_hist_slider,
+           WW2     = input$WW2_hist_slider,
+           Korea   = input$Korea_hist_slider,
+           Vietnam = input$Vietnam_hist_slider)
+  }
+
+  war_hor_trans_input <- function(war_tag) {
+    switch(war_tag,
+           WW1     = input$WW1_transformation_hor,
+           WW2     = input$WW2_transformation_hor,
+           Korea   = input$Korea_transformation_hor,
+           Vietnam = input$Vietnam_transformation_hor)
+  }
+
+  war_ver_trans_input <- function(war_tag) {
+    switch(war_tag,
+           WW1     = input$WW1_transformation_ver,
+           WW2     = input$WW2_transformation_ver,
+           Korea   = input$Korea_transformation_ver,
+           Vietnam = input$Vietnam_transformation_ver)
+  }
+
+      matches <- this_input %in% choices
+      if (any(matches)) {
+        selected <- this_input[matches]
+      } else {
+        selected <- "All"
+      }
 
 

@@ -1,12 +1,12 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Complete pounds ---------------------------------------------------------
 
-WW2_bombs[is.na(Weapon_Weight_Pounds) & !is.na(Weapon_Weight_Tons), 
-          `:=`(Weapon_Weight_Pounds = round_to_int(Weapon_Weight_Tons * 2000))]
+# WW2_bombs[is.na(Weapon_Weight_Pounds) & !is.na(Weapon_Weight_Tons), 
+#           `:=`(Weapon_Weight_Pounds = round_to_int(Weapon_Weight_Tons * 2000))]
 
 
 ### Complete tonnage 1 ------------------------------------------------------

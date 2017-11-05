@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Constructors ------------------------------------------------------------
@@ -60,6 +60,7 @@ menu_civilian <- function() {
            tabName = "civilian", 
            icon = icon('life-ring',   lib = 'font-awesome'))
 }
+
 
 ### Tab Picker Constructors
 
@@ -127,6 +128,20 @@ weapon_picker <- function() {
                  multiple = TRUE, 
                  width = sidebar_width)
 }
+
+animation_picker <- function() { 
+  selectInput(inputId = "map_animate_delta", 
+              label = "Animate by", 
+              choices = c("year", "month", "week"), 
+              selected = "year", 
+              multiple = FALSE)
+}
+
+animation_button <- function() {
+  actionButton(inputId = "map_animate_button", 
+               label = "Animate!")
+}
+
 
 ### Item Constructors
 
@@ -267,8 +282,8 @@ datatable_output <- function() {
 }
 
 war_plot_outputs <- function(war_tag) {
-  fluidRow(box(plotOutput(paste0(war_tag, "_hist"))),
-           box(plotOutput(paste0(war_tag, "_sandbox"))))
+  fluidRow(box(plotOutput(war_hist_ids[[war_tag]])),
+           box(plotOutput(war_sandbox_ids[[war_tag]])))
 }
 
 war_plot_mods <- function(war_tag) {
@@ -373,7 +388,9 @@ shinyUI(dashboardPage(
                    target_picker(), 
                    country_picker(), 
                    aircraft_picker(), 
-                   weapon_picker()
+                   weapon_picker(), 
+                   animation_picker(), 
+                   animation_button()
   ),
   
 

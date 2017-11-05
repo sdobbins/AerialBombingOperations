@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.8.1
-# @date 2017-08-15 21:00
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Version History ###
@@ -113,25 +113,26 @@ Notes: sidebar and other parts reduced to what works
 	Created utils.R for debugging purposes
 	Split README into README and NEWS
 
+0.9.9	Added cinema and maps
+	Functionalized more regex code
+	Fixed more data cleaning errors
+	Added Wikipedia links to and reformatted tooltips
+	Added animation
+	Further reduced redundant code
+
 ### Future version plans:
 
-0.9.9	<finalize graphs and other tabs>
-
-1.0	<misc bug fixes, data polishing, and tooltip improvement>
+1.0	<misc bug fixes, data polishing>
 Complete version
 
 
 ### Future change notepad:
 
-#*#* see if you can use Map and Reduce in code; basically, get rid of some for loops
+#*#* read through R Graphics Cookbook to fix ggplot2/ggvis graphs and such
 
-#*#*#* read through R Graphics Cookbook to fix ggplot2/ggvis graphs and such
+#*#* speed up fix_missing_values code
 
-#*#*#*#* some WW2 bombs are encoded by weight of explosive, and others by gross weight
-
-#*#*#*#*#* speed up fix_missing_values code
-
-#*#*#*#*#*#*#* generate minimal reproducible example whereby the processor clean_data walking refactor_and_order step alters levels (by adding names) in bombs_data tables even though the two aren't (shouldn't be) linked
+#*#* generate minimal reproducible example whereby the processor clean_data walking refactor_and_order step alters levels (by adding names) in bombs_data tables even though the two aren't (shouldn't be) linked
 
 Data Processing:
 # also do some num * per-unit-weight = total-weight calculation verification for Korea 2 and others
@@ -157,13 +158,10 @@ Programming Style:
 
 Programming Quality:
 # merge together Korea1 and Korea2 after cleaning
-# compare timing with and without JIT compiler
 # figure out a way to suppress or fix all those warnings (and also random data.table updates and package information)
 # make sure filters returning NAs don't mess things up--check if nomatch = 0 would be better
-# see if different map_*() functions can improve speed
 # see if broom can fix issues with the vectorized strsplit helper functions I made
 # maybe change local absolute paths to relative paths--use basename/dirname to help with filepaths stuff / use file.path to make filepaths platform independent (path.expand may help as well)
-# maybe fix proper_noun_phrase_vectorized by filtering down amount of data that needs to be processed at each step: first check if the given line is empthy, then check if the line is only one word long (doesn't contain any of the split characters) and then check for each character before each step (or keep large vectors of logicals about whether each symbol is contained in each row and use those)
 
 Small Improvements:
 # times with hms or ITime
@@ -174,12 +172,13 @@ Small Improvements:
 
 Significant Improvements:
 # Edit civilian map to have not just number of bombing missions but also number of bombs and weight of bombs to get a better sense of danger/intensity
-# Better ggplots, maybe a self-playing gif of bombs droppedover time for each conflict
-# Could also allow users to link (using html) to relevant Wikipedia articles on certain aspects of the conflicts (airframes, campaigns, etc.)
+# Better ggplots, maybe a self-playing gif of bombs dropped over time for each conflict
 # maybe put background of flags with low alpha over territories they controlled
 # also include vague categories like "incendiary", "fragmentary", and "high explosive" (as in WW2) as possible selections in weapons drop down (depending on what wars and countries are selected); provide fragmentary, incendiary, and high explosive columns in non-WW2 databases as well
 # maybe also add a kinetic weapon column for WW2 and others
-# rewrite type-specific if_else in Rcpp so that it only calculates the values it needs (or just write your own if.else in R that automatically reshuffles the code to do everything <- `true`, everything[places where not TRUE] <- `false`)
+# clustering based on geographic distances (latitude and longitude)
+# Google Maps-based checking of locations
+# complicated SVM could also separate countries (basically this is outlier detection but the decision boundary could also draw map); train many one-vs-all SVMs on latitudinal and longitudinal data to depict boundaries of country
 
 Misc/Other Projects:
 # broom for list-columns of models etc

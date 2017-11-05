@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Files -------------------------------------------------------------------
@@ -8,13 +8,13 @@
 save_name <- "Shiny_"
 save_name_downsampled <- "Shiny_downsampled_"
 save_extension <- ".RData"
-most_recent_save_date <- "2017-09-11"
+most_recent_save_date <- "2017-09-17"
 
 
 ### Filepath Parameters -----------------------------------------------------
 
 # project directory
-local_directory <- "/Users/scottdobbins/Developer/RStudio/NYCDSA/ScottDobbins_Shiny/"
+local_directory <- "/Users/scottdobbins/Developer/RStudio/AerialBombingOperations/"
 
 # data directories
 WW1_directory_infix     <- "THOR/WW1/"
@@ -60,7 +60,7 @@ Vietnam_unique_filename <- "Vietnam_unique.csv"
 
 # save directories
 local_save_infix <- "saves/"
-external_save_directory <- "/Volumes/My Passport/projects temp/Shiny/"
+external_save_directory <- "/Volumes/My Passport/temp/data science/Shiny/"
 
 
 ### Others ------------------------------------------------------------------

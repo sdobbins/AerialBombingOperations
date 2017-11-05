@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Setup -------------------------------------------------------------------
@@ -209,18 +209,18 @@ WW2_bombs %>%
                               "Weapon_Frag_Type"))
 
 # new columns
-WW2_bombs[, Weapon_Expl_Unit_Weight := grem(pattern = "[^0-9][ -~]*", Weapon_Expl_Type)]
-WW2_bombs[, Weapon_Expl_Unit_Weight := as.integer(if_else(Weapon_Expl_Unit_Weight %like% "[0-9]+", 
+WW2_bombs[, Weapon_Expl_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Expl_Type)]
+WW2_bombs[, Weapon_Expl_Unit_Weight := as.integer(if_else(Weapon_Expl_Unit_Weight %like% "\\d+", 
                                                           Weapon_Expl_Unit_Weight, 
                                                           NA_character_))]
 
-WW2_bombs[, Weapon_Incd_Unit_Weight := grem(pattern = "[^0-9][ -~]*", Weapon_Incd_Type)]
-WW2_bombs[, Weapon_Incd_Unit_Weight := as.integer(if_else(Weapon_Incd_Unit_Weight %like% "[0-9]+", 
+WW2_bombs[, Weapon_Incd_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Incd_Type)]
+WW2_bombs[, Weapon_Incd_Unit_Weight := as.integer(if_else(Weapon_Incd_Unit_Weight %like% "\\d+", 
                                                           Weapon_Incd_Unit_Weight, 
                                                           NA_character_))]
 
-WW2_bombs[, Weapon_Frag_Unit_Weight := grem(pattern = "[^0-9][ -~]*", Weapon_Frag_Type)]
-WW2_bombs[, Weapon_Frag_Unit_Weight := as.integer(if_else(Weapon_Frag_Unit_Weight %like% "[0-9]+", 
+WW2_bombs[, Weapon_Frag_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Frag_Type)]
+WW2_bombs[, Weapon_Frag_Unit_Weight := as.integer(if_else(Weapon_Frag_Unit_Weight %like% "\\d+", 
                                                           Weapon_Frag_Unit_Weight, 
                                                           NA_character_))]
 
@@ -456,8 +456,8 @@ offending_targets <- target_names %which!in% c("UNIDENTIFIED", "UNKNOWN, BAY, HI
 WW2_bombs[Target_City %contain% word(offending_targets) & 
             Target_Type == "", 
           `:=`(Target_Type = Target_City, 
-               Target_City = gremm(Target_City, and_rest_of(word(offending_targets))))]
-drop_similar_levels(WW2_bombs[["Target_City"]], drop = offending_targets, exact = TRUE)
+               Target_City = Target_City %>% remove_after(word(any_of(offending_targets)) %>% with_preceding, greedy = TRUE, inclusive = TRUE))]
+drop_similar_levels(WW2_bombs[["Target_City"]], drop = word(offending_targets))
 
 # editing string levels
 WW2_bombs[["Unit_Service"]] %>% 
@@ -537,11 +537,24 @@ WW2_bombs[["Weapon_Frag_Type"]] %>%
 
 WW2_bombs[["Target_City"]] %>% 
   drop_levels(drop = c("UNKNOWN", "UNIDENTIFIED")) %>% 
-  drop_levels_formula(expr = (grem(., pattern = "[ NSEW]+") %like% "^[0-9.]+$")) %>% 
+  drop_levels_formula(expr = (grem(., pattern = "[ NSEW]+") %like% "^[\\d.]+$")) %>% 
   rename_similar_levels(changes = c("LONGSTOP" = "\\b(LONG STOP)\\b")) %>% 
   format_levels(remove_parentheticals %,% remove_square_brackets) %>% 
   rename_similar_levels(changes = target_city_rules) %>% 
-  format_levels(proper_noun_phrase_vectorized)
+  format_levels(proper_noun_phrase_vectorized) %>% 
+  drop_levels(drop = c("Battle", "Convoy", "Mt", "Mt on"))
+  rename_levels(changes = c("Beaumont sur Oise"    = "Beaum", 
+                            "Beaumont le Roger"    = "Beaumdnt le Roger", 
+                            "Czelldomolk"          = "Czelldomdlk", 
+                            "Foret de Isle Adam"   = "Foret de Isle Ada", 
+                            "Krefeld"              = "Frefeld", 
+                            "Freital"              = "Freita", 
+                            "Merzenich"            = "Merzenicg", 
+                            "Pont St Esprit"       = "Pdnt St Esprit", 
+                            "Sandersleben"         = "Sangersleben", 
+                            "Sottevast"            = "Soltevast", 
+                            "St Pierre de la Fage" = "St Pierre de la Fag", 
+                            "Wittlich"             = "Wiltlich"))
 
 WW2_bombs[["Target_Type"]] %>% 
   drop_similar_levels(drop = "\\b(UNID|UNDENT)") %>% 
@@ -613,12 +626,24 @@ WW2_bombs[["Target_Priority"]] %>%
   format_levels(tolower)
 
 # fill out matching codes and values
+fact_cols = c("Target_Country", 
+              "Target_City", 
+              "Target_Industry", 
+              "Target_Priority", 
+              "Sighting_Method")
+code_cols = c("Target_Country_Code", 
+              "Target_City_Code", 
+              "Target_Industry_Code", 
+              "Target_Priority_Code", 
+              "Sighting_Method_Code")
+WW2_bombs[, (code_cols) := lapply(.SD, factor, exclude = NULL), .SDcols = code_cols]
+
 WW2_bombs %>% 
-  fill_matching_values(Target_Country,  Target_Country_Code,  drop.codes = TRUE, backfill = TRUE) %>% 
-  fill_matching_values(Target_City,     Target_City_Code,     drop.codes = TRUE, backfill = TRUE) %>% 
-  fill_matching_values(Target_Industry, Target_Industry_Code, drop.codes = TRUE, backfill = TRUE) %>% 
-  fill_matching_values(Target_Priority, Target_Priority_Code, drop.codes = TRUE, backfill = TRUE) %>% 
-  fill_matching_values(Sighting_Method, Sighting_Method_Code, drop.codes = TRUE, backfill = TRUE)
+  fill_matching_values_by_col(code_cols = code_cols, value_cols = value_cols, drop.codes = TRUE, backfill = TRUE)
+
+# fill out missing countries by city
+WW2_bombs %>% 
+  fill_matching_values(code_col = "Target_City", value_col = "Target_Country", NA_level_code = "", NA_level_value = "")
 
 # long weapons types and numbers cleaning script
 source('WW2_weapon_cleaning.R')
@@ -713,14 +738,14 @@ cols <- c("Aircraft_Attacking_Num",
 Korea_bombs2[, (cols) := lapply(.SD, as.integer), .SDcols = cols]
 
 # column error fixes
-Korea_bombs2[Bomb_Altitude_Feet_Range != "" & !(Bomb_Altitude_Feet_Range %like% "[0-9]+ ?- ?[0-9]*"), 
+Korea_bombs2[Bomb_Altitude_Feet_Range != "" & !(Bomb_Altitude_Feet_Range %like% "\\d+ ?- ?\\d*"), 
              `:=`(Bomb_Damage_Assessment = Bomb_Altitude_Feet_Range, 
                   Bomb_Altitude_Feet_Range = "")]
 Korea_bombs2[Bomb_Altitude_Feet_Range == "" & 
-               Bomb_Damage_Assessment %like% "^[0-9]+$", 
+               Bomb_Damage_Assessment %like% "^\\d+$", 
              `:=`(Bomb_Altitude_Feet_Range = Bomb_Damage_Assessment, 
                   Bomb_Damage_Assessment = "")]
-drop_similar_levels(Korea_bombs2[["Bomb_Damage_Assessment"]], drop = "^[0-9]+$")
+drop_similar_levels(Korea_bombs2[["Bomb_Damage_Assessment"]], drop = "^\\d+$")
 
 Korea_bombs2[Aircraft_Total_Weight %like% "\\d+ - \\d+", 
              `:=`(Aircraft_Total_Weight = "")]
@@ -730,12 +755,12 @@ Korea_bombs2[Target_City %like% "ission|ccomplish|erform|btain|eturn|lew|B[CO][A
                   Target_City = "")]
 drop_similar_levels(Korea_bombs2[["Target_City"]], drop = "ission|ccomplish|erform|btain|eturn|lew|B[CO][APR]|photo|reconnaissance|weather|due to|Non-effective")
 
-formatted_target_names <- word(capitalize_phrase_vectorized(target_names))
-Korea_bombs2[Target_City %contain% formatted_target_names & 
+formatted_target_names <- capitalize_phrase_vectorized(target_names)
+Korea_bombs2[Target_City %contain% word(formatted_target_names) & 
                Target_Type == "", 
              `:=`(Target_Type = Target_City, 
-                  Target_City = gremm(Target_City, formatted_target_names))]
-drop_similar_levels(Korea_bombs2[["Target_City"]], drop = formatted_target_names)
+                  Target_City = grem(Target_City, word(any_of(formatted_target_names))) %>% fix_spaces)]
+drop_similar_levels(Korea_bombs2[["Target_City"]], drop = word(any_of(formatted_target_names)))
 
 Korea_bombs2[Target_Type %exactlylike% "ccomplished|erformed|eturned", 
              `:=`(Bomb_Damage_Assessment = Target_Type, 
@@ -751,18 +776,18 @@ cols <- c("Bomb_Altitude_Feet_Low",
 Korea_bombs2[, (cols) := tstrsplit(Bomb_Altitude_Feet_Range, " ?- ?", keep = 1:2)]
 Korea_bombs2[, (cols) := lapply(.SD, as.integer), .SDcols = cols]
 
-Korea_bombs2[, Weapon_Unit_Weight := grem(pattern = "[^0-9][ -~]*", Weapon_Type)]
-Korea_bombs2[, Weapon_Unit_Weight := as.integer(if_else(Weapon_Unit_Weight %like% "[0-9]+", 
+Korea_bombs2[, Weapon_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Type)]
+Korea_bombs2[, Weapon_Unit_Weight := as.integer(if_else(Weapon_Unit_Weight %like% "\\d+", 
                                                         Weapon_Unit_Weight, 
                                                         NA_character_))]
 Korea_bombs2[, Weapon_Weight_Pounds := Aircraft_Attacking_Num * Aircraft_Bombload_Calculated_Pounds]
 
 # general fixes, numerics
-Korea_bombs2[, Target_Latitude  := grem(pattern = "[^0-9.]*", Target_Latitude)]
+Korea_bombs2[, Target_Latitude  := grem(pattern = "[^\\d.]*", Target_Latitude)]
 Korea_bombs2[, Target_Latitude  := as.numeric(if_else(Target_Latitude == "", 
                                                       NA_character_, 
                                                       Target_Latitude))]
-Korea_bombs2[, Target_Longitude := grem(pattern = "[^0-9.]*", Target_Longitude)]
+Korea_bombs2[, Target_Longitude := grem(pattern = "[^\\d.]*", Target_Longitude)]
 Korea_bombs2[, Target_Longitude := as.numeric(if_else(Target_Longitude == "", 
                                                       NA_character_, 
                                                       Target_Longitude))]
@@ -1082,7 +1107,7 @@ Vietnam_bombs[, Mission_Function_Code := as.integer(if_else(Mission_Function_Cod
 
 # fill out matching codes and values
 Vietnam_bombs %>% 
-  fill_matching_values(Mission_Function, Mission_Function_Code, drop.codes = TRUE, backfill = TRUE, drop.values = FALSE)
+  fill_matching_values_(Mission_Function_Code, Mission_Function, drop.codes = TRUE, backfill = TRUE)
 
 # reduced columns
 Vietnam_bombs[, Target_Category := Target_Type][["Target_Category"]] %>% 

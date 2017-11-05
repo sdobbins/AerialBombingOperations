@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9
-# @date 2017-09-17 18:30
+# @version 0.9.9.2
+# @date 2017-11-05 02:16
 
 
 ### Developer Control -------------------------------------------------------
@@ -10,8 +10,8 @@ debug_mode_on <- TRUE
 debug_sample_size <- 1024
 
 # data refresh
-refresh_data <- TRUE
-full_write <- TRUE
+refresh_data <- FALSE
+full_write <- FALSE
 
 # JIT compiler settings
 use_compiler <- TRUE
@@ -67,6 +67,9 @@ boxplot_width <- 0.2
 civilian_blur <- 20
 civilian_max <- 0.05
 civilian_radius <- 15
+
+# animation parameters
+animation_delays <- c("year" = 2, "month" = 1, "week" = 0.5)
 
 # usage keys
 HERE_id <- '5LPi1Hu7Aomn8Nv4If6c'
@@ -124,8 +127,8 @@ Vietnam_first_mission <- as.Date("1965-06-01")
 Vietnam_last_mission  <- as.Date("1975-06-30")
 
 # for app
-earliest_date <- min(WW1_start_date, WW1_first_mission)
-latest_date <- max(Vietnam_end_date, Vietnam_last_mission)
+earliest_date <- floor_date(min(WW1_start_date, WW1_first_mission), "year")
+latest_date <- ceiling_date(max(Vietnam_end_date, Vietnam_last_mission), "year")
 
 
 ### Historical Data ---------------------------------------------------------
