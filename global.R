@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 
 ### Import Packages ---------------------------------------------------------
@@ -11,7 +11,7 @@ library(shinyjs)        # dynamic UI display
 library(leaflet)        # map source
 library(leaflet.extras) # map extras
 library(ggplot2)        # plots and graphs
-library(gganimate)
+# library(gganimate)      # animations
 library(assertthat)     # assertions for errors
 library(memoise)        # caching
 library(dplyr)          # data processing

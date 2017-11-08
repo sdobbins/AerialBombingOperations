@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 ### Code Graveyard ###
 # where buggy or formerly useful but now unnecessary code lays to rest
@@ -2794,5 +2794,125 @@ flush_irrelevant_selectize_choices <- function() {
       } else {
         selected <- "All"
       }
+
+sandbox_output <- function(war_tag) {
+    force(war_tag)
+    renderPlot({
+      ind_input <- input[[war_sandbox_ind_ids[[war_tag]]]]
+      dep_input <- input[[war_sandbox_dep_ids[[war_tag]]]]
+      group_input <- input[[war_sandbox_group_ids[[war_tag]]]]
+      transformation_horizontal <- input[[war_transformation_hor_ids[[war_tag]]]]
+      transformation_vertical <- input[[war_transformation_ver_ids[[war_tag]]]]
+      if (ind_input %c% war_continuous_choices[[war_tag]]) {
+        make_points_plot <- TRUE
+        make_stats_plot <- FALSE
+        plot_ind <- war_continuous[[war_tag]][[ind_input]]
+      } else {
+        make_stats_plot <- TRUE
+        make_points_plot <- FALSE
+        plot_ind <- war_categorical[[war_tag]][[ind_input]]
+      }
+      plot_dep <- war_continuous[[war_tag]][[dep_input]]
+      if (group_input == "None") {
+        grouped_plot <- FALSE
+        graph_dt <- copy((war_selection[[war_tag]])()[, c(ind = plot_ind, dep = plot_dep), with = FALSE])
+        setnames(graph_dt, c("ind", "dep"))
+      } else {
+        grouped_plot <- TRUE
+        plot_group <- war_categorical[[war_tag]][[group_input]]
+        graph_dt <- copy((war_selection[[war_tag]])()[, c(ind = plot_ind, dep = plot_dep, grp = plot_group), with = FALSE])
+        setnames(graph_dt, c("ind", "dep", "grp"))
+      }
+      if (make_points_plot) {
+        if (grouped_plot) {
+          sandbox_plot <- ggplot(data = graph_dt, 
+                                 mapping = aes(x     = ind, 
+                                               y     = dep, 
+                                               color = grp)) + 
+            guides(color = guide_legend(title = group_input))
+        } else {
+          sandbox_plot <- ggplot(data = graph_dt, 
+                                 mapping = aes(x = ind, 
+                                               y = dep))
+        }
+        sandbox_plot <- sandbox_plot + 
+          geom_point() + 
+          geom_smooth(method = 'lm')
+        if (transformation_horizontal == "Logarithm") {
+          sandbox_plot <- sandbox_plot + scale_x_log10()
+        }
+      } else if (make_stats_plot) {
+        if (ind_input == "None (All Data)") {
+          if (grouped_plot) {
+            sandbox_plot <- ggplot(data = graph_dt, 
+                                   mapping = aes(x    = "", 
+                                                 y    = dep, 
+                                                 fill = grp)) + 
+              guides(fill = guide_legend(title = group_input))
+          } else {
+            sandbox_plot <- ggplot(data = graph_dt, 
+                                   mapping = aes(x = "", 
+                                                 y = dep))
+          }
+        } else {
+          if (grouped_plot) {
+            items_to_plot <- graph_dt[, .(uniqueN = uniqueN(ind)), by = grp][, sum(uniqueN)]
+          } else {
+            items_to_plot <- uniqueN(graph_dt[["ind"]])
+          }
+          if (items_to_plot > subset_graph_threshold) {
+            graph_dt[["ind"]] %>% 
+              otherize_levels_prop(cutoff = representation_prop_cutoff, other = 'others') %>% 
+              otherize_levels_rank(rank = representation_rank_cutoff, other = 'others')
+            if (grouped_plot) {
+              items_to_plot <- graph_dt[, .(uniqueN = uniqueN(ind)), by = grp][, sum(uniqueN)]
+            } else {
+              items_to_plot <- uniqueN(graph_dt[["ind"]])
+            }
+            # most_represented <- graph_dt[, .N, by = plot_ind][order(N, decreasing = TRUE)][1:most_represented_cutoff][[plot_ind]]
+            # graph_dt_to_plot <- graph_dt[.(most_represented), on = plot_ind]
+          } else {
+            #
+          }
+          graph_order <- graph_dt[, .(func = (function(x) median(x, na.rm = TRUE) + mean(x, na.rm = TRUE)/10)(dep)), by = ind][order(func)][["ind"]]
+          graph_dt[, ind := ordered(ind, levels = graph_order)]
+          if (grouped_plot) {
+            sandbox_plot <- ggplot(data = graph_dt, 
+                                   mapping = aes(x    = ind, 
+                                                 y    = dep, 
+                                                 fill = grp)) + 
+              guides(fill = guide_legend(title = group_input))
+          } else {
+            sandbox_plot <- ggplot(data = graph_dt, 
+                                   mapping = aes(x = ind, 
+                                                 y = dep))
+          }
+          if (items_to_plot > coord_flip_threshold) {
+            sandbox_plot <- sandbox_plot + coord_flip()
+          }
+        }
+        sandbox_plot <- sandbox_plot + 
+          geom_violin(draw_quantiles = c(0.25, 0.50, 0.75), trim = FALSE) + 
+          stat_summary(fun.y = mean, geom = 'point', shape = 23, size = 2)
+      }
+      if (transformation_vertical == "Logarithm") {
+        sandbox_plot <- sandbox_plot + scale_y_log10()
+      }
+      sandbox_plot + 
+        ggtitle(war_sandbox_title[[war_tag]]) + 
+        xlab(ind_input) + 
+        ylab(dep_input) + 
+        theme_bw()
+    })
+  }
+  for (tag in war_tags) {
+    output[[war_sandbox_ids[[tag]]]] <- sandbox_output(tag)
+  }
+
+ if (grouped_plot) {
+          items_to_plot <- graph_dt[, .(uniqueN = uniqueN(ind)), by = grp][, sum(uniqueN)]
+        } else {
+          items_to_plot <- uniqueN(graph_dt[["ind"]])
+        }
 
 

@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 
 ### Package Functions -------------------------------------------------------
@@ -629,31 +629,92 @@ reduce_levels <- function(fact, rules, other = "other", exact = FALSE) {
   re_level(fact, new_levels)
 }
 
-otherize_levels_rank <- function(fact, rank, other = "other", exact = FALSE) {
-  contains_empty_level <- "" %c% levels(fact)
-  lookup_table <- data.table(levels = levels(fact), count = tabulate_factor(fact))
-  if (contains_empty_level) {
+otherize_levels_rank <- function(fact, cutoff, other = "other", otherize_empty_levels = TRUE, include_ties = TRUE) {
+  fact_levels <- levels(fact)
+  if (otherize_empty_levels) {
+    otherize_empty_levels <- "" %c% fact_levels
+  }
+  lookup_table <- data.table(levels = fact_levels, count = tabulate_factor(fact))
+  if (other %c% fact_levels) {
+    cutoff <- cutoff + 1L
+  }
+  if (otherize_empty_levels) {
     lookup_table <- lookup_table[levels != ""]
   }
   setkey(lookup_table, count)
-  dropped_levels <- lookup_table[1:(.N-rank), levels]
-  if (contains_empty_level) {
+  if (include_ties) {
+    count_at_cutoff <- lookup_table[.N-cutoff, count]
+    dropped_levels <- lookup_table[count < count_at_cutoff, levels]
+  } else {
+    dropped_levels <- lookup_table[1:(.N-cutoff), levels]
+  }
+  if (otherize_empty_levels) {
     dropped_levels <- append(dropped_levels, "")
   }
   drop_levels(fact, drop = dropped_levels, to = other)
 }
 
-otherize_levels_prop <- function(fact, cutoff, other = "other", exact = FALSE) {
-  contains_empty_level <- "" %c% levels(fact)
-  lookup_table <- data.table(levels = levels(fact), prop = level_proportions(fact))
-  if (contains_empty_level) {
+otherize_levels_prop <- function(fact, cutoff, other = "other", otherize_empty_levels = TRUE) {
+  fact_levels <- levels(fact)
+  if (otherize_empty_levels) {
+    otherize_empty_levels <- "" %c% fact_levels
+  }
+  lookup_table <- data.table(levels = fact_levels, prop = level_proportions(fact))
+  if (otherize_empty_levels) {
     lookup_table <- lookup_table[levels != ""]
   }
   dropped_levels <- lookup_table[prop < cutoff, levels]
-  if (contains_empty_level) {
+  if (otherize_empty_levels) {
     dropped_levels <- append(dropped_levels, "")
   }
   drop_levels(fact, drop = dropped_levels, to = other)
+}
+
+otherize_levels_count <- function(fact, cutoff, other = "other", otherize_empty_levels = TRUE) {
+  fact_levels <- levels(fact)
+  if (otherize_empty_levels) {
+    otherize_empty_levels <- "" %c% fact_levels
+  }
+  lookup_table <- data.table(levels = fact_levels, count = tabulate_factor(fact))
+  if (otherize_empty_levels) {
+    lookup_table <- lookup_table[levels != ""]
+  }
+  dropped_levels <- lookup_table[count < cutoff, levels]
+  if (otherize_empty_levels) {
+    dropped_levels <- append(dropped_levels, "")
+  }
+  drop_levels(fact, drop = dropped_levels, to = other)
+}
+
+otherize_groups_count <- function(dt, fact_name, group_name, cutoff, other = "other") {
+  count_table <- dt[, .N, by = c(fact_name, group_name)]
+  for_removal <- count_table[N < cutoff, c(fact_name, group_name), with = FALSE]
+  for (c in seq_len(nrow(for_removal))) {
+    set(dt, i = which(dt[[fact_name]] == for_removal[[fact_name]][[c]] & dt[[group_name]] == for_removal[[group_name]][[c]]), j = fact_name, value = other)
+  }
+}
+
+otherize_groups_prop <- function(dt, fact_name, group_name, cutoff, other = "other") {
+  dt_rows <- nrow(dt)
+  prop_table <- dt[, .(prop = .N / dt_rows), by = c(fact_name, group_name)]
+  for_removal <- prop_table[prop < cutoff, c(fact_name, group_name), with = FALSE]
+  for (c in seq_len(nrow(for_removal))) {
+    set(dt, i = which(dt[[fact_name]] == for_removal[[fact_name]][[c]] & dt[[group_name]] == for_removal[[group_name]][[c]]), j = fact_name, value = other)
+  }
+}
+
+otherize_groups_rank <- function(dt, fact_name, group_name, cutoff, other = "other", include_ties = TRUE) {
+  count_table <- dt[, .N, by = c(fact_name, group_name)]
+  setkey(count_table, N)
+  if (include_ties) {
+    N_at_cutoff <- count_table[.N-cutoff, N]
+    for_removal <- count_table[N < N_at_cutoff, c(fact_name, group_name), with = FALSE]
+  } else {
+    for_removal <- count_table[1:(.N-cutoff), c(fact_name, group_name), with = FALSE]
+  }
+  for (c in seq_len(nrow(for_removal))) {
+    set(dt, i = which(dt[[fact_name]] == for_removal[[fact_name]][[c]] & dt[[group_name]] == for_removal[[group_name]][[c]]), j = fact_name, value = other)
+  }
 }
 
 if (is_package_loaded("data.table")) {
@@ -864,7 +925,7 @@ fill_matching_values_by_col <- function(data, code_cols, value_cols, drop.codes 
   drop.codes       <- recycle_arguments(drop.codes,       num_cols)
   backfill         <- recycle_arguments(backfill,         num_cols)
   drop.values      <- recycle_arguments(drop.values,      num_cols)
-  NA_level_value    <- recycle_arguments(NA_level_value,    num_cols)
+  NA_level_value   <- recycle_arguments(NA_level_value,   num_cols)
   NA_level_code    <- recycle_arguments(NA_level_code,    num_cols)
   assume.exclusive <- recycle_arguments(assume.exclusive, num_cols)
   for (i in seq_along(value_cols)) {

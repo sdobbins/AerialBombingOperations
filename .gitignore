@@ -1,8 +1,16 @@
+# specific files
+.gitignore
+IDEAS.txt
+graveyard.R
+
+# folders
 countries/*
 images/*
 notes/*
 rsconnect/*
 THOR/*
+
+# types of files
 *.csv
 /*.csv
 *.jpg
@@ -19,3 +27,4 @@ THOR/*
 .Rhistory
 /*_cache/
 /cache/
+

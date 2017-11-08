@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 
 ### Constructors ------------------------------------------------------------
@@ -398,7 +398,6 @@ shinyUI(dashboardPage(
   
   dashboardBody(
     useShinyjs(), 
-    #***really wish this would also apply my desired formatting to the sidebar, but it seems not
     tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")), 
     
     tabItems(

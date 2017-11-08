@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 
 ### Local Values ------------------------------------------------------------
@@ -10,6 +10,7 @@ WW1_countries <- c("UK", "USA")
 WW1_service <- c("GAR", "RAF", "USAAS")
 WW2_countries <- c("UK", "USA")
 WW2_service <- c("AF", "RAF", "RAAF", "RNZAF", "SAAF", "TAC")
+WW2_theaters <- c("CBI", "ETO", "MTO", "PTO")
 Korea_countries <- c("USA")
 Korea_service <- c()
 Vietnam_countries <- c("USA")
@@ -20,7 +21,7 @@ roman_numerals <- c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
 
 upper_case_abbreviations <- c("AAA", "HQ", "RR", "USS")
 upper_case_abbreviations_lower <- tolower(upper_case_abbreviations)
-upper_case_set <- unique(c(directions, countries, services, roman_numerals, upper_case_abbreviations))
+upper_case_set <- unique(c(directions, countries, services, WW2_theaters, roman_numerals, upper_case_abbreviations))
 upper_case_set_lower <- tolower(upper_case_set)
 
 WW1_aircraft_letters <- c()

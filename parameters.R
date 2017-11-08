@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 
 ### Developer Control -------------------------------------------------------
@@ -60,16 +60,25 @@ Vietnam_background <- 'olivedrab'
 example_background <- 'snow'
 font_weight <- 'bold'
 
-# graph parameters
+# map parameters
 point_weight <- 5
 point_fill <- TRUE
-boxplot_width <- 0.2
 civilian_blur <- 20
 civilian_max <- 0.05
 civilian_radius <- 15
 
+# graph parameters
+coord_flip_threshold <- 12L
+subset_graph_threshold <- 48L
+count_cutoff <- 3L
+prop_cutoff <- 0.001
+rank_cutoff <- subset_graph_threshold
+# high_cutoff <- 5L
+# low_cutoff <- 5L
+# boxplot_width <- 0.2
+
 # animation parameters
-animation_delays <- c("year" = 2, "month" = 1, "week" = 0.5)
+animation_delays <- c("year" = 1.5, "month" = 1, "week" = 0.5)
 
 # usage keys
 HERE_id <- '5LPi1Hu7Aomn8Nv4If6c'

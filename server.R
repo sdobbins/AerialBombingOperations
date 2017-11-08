@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.2
-# @date 2017-11-05 02:16
+# @version 0.9.9.3
+# @date 2017-11-07 19:30
 
 
 # ### initialize plotly ###
@@ -151,7 +151,7 @@ shinyServer(function(input, output, session) {
   
   # number of aircraft
   output$num_aircraft <- renderInfoBox({
-    infoBox(title = "Aircraft Flights", 
+    infoBox(title = "Flights", 
             value = add_commas(get_total_flights()), 
             icon = icon('fighter-jet', lib = 'font-awesome'))
   })
@@ -187,6 +187,9 @@ shinyServer(function(input, output, session) {
     <b>Satellite</b> map: visualize current-day city features"
   })
   
+
+### Animations --------------------------------------------------------------
+  
   animation_delta <- eventReactive(eventExpr = input$map_animate_delta, 
                                    valueExpr = {
                                      switch(input$map_animate_delta, 
@@ -206,20 +209,43 @@ shinyServer(function(input, output, session) {
       previous_start_date <<- input$dateRange[1]
       previous_end_date   <<- input$dateRange[2]
       if (input$tabs %c% war_tags) {
-        relevant_first_mission <- war_first_missions[[input$tabs]]
-        relevant_last_mission <- war_last_missions[[input$tabs]]
+        dates <- dates_from_selection(input$tabs)
+        relevant_first_mission <- dates[["first"]]
+        relevant_last_mission <- dates[["last"]]
       } else {
-        relevant_first_mission  <- war_first_missions[[first(wars_selected)]]
-        relevant_last_mission <- war_last_missions[[last(wars_selected)]]
+        dates_first <- dates_from_selection(first(wars_selected))
+        dates_last <- dates_from_selection(last(wars_selected))
+        relevant_first_mission  <- dates_first[["first"]]
+        relevant_last_mission <- dates_last[["last"]]
       }
       current_start_date  <- floor_date(relevant_first_mission, input$map_animate_delta)
-      current_end_date    <- current_start_date + animation_delta()
-      animation_end_date <<- ceiling_date(relevant_last_mission, input$map_animate_delta)
+      current_end_date    <- current_start_date + animation_delta() - days(1L)
+      animation_end_date <<- ceiling_date(relevant_last_mission, input$map_animate_delta) - days(1L)
       animation_toggle(TRUE)
       updateDateRangeInput(session, 
                            inputId = "dateRange", 
                            start = current_start_date, 
                            end = current_end_date)
+    }
+  })
+  
+  animation_stoppage_listener <- reactive({
+    list(input$tabs, 
+         input$which_war, 
+         input$regions, 
+         input$targets, 
+         input$countries, 
+         input$aircrafts, 
+         input$weapons)
+  })
+  
+  animation_stopper <- observeEvent(eventExpr = animation_stoppage_listener(), handlerExpr = {
+    if (animation_toggle()) {
+      animation_toggle(FALSE)
+      updateDateRangeInput(session, 
+                           inputId = "dateRange", 
+                           start = previous_start_date, 
+                           end = previous_end_date)
     }
   })
   
@@ -355,45 +381,123 @@ shinyServer(function(input, output, session) {
       ind_input <- input[[war_sandbox_ind_ids[[war_tag]]]]
       dep_input <- input[[war_sandbox_dep_ids[[war_tag]]]]
       group_input <- input[[war_sandbox_group_ids[[war_tag]]]]
-      war_dt <- (war_selection[[war_tag]])()
+      transformation_horizontal <- input[[war_transformation_hor_ids[[war_tag]]]]
+      transformation_vertical <- input[[war_transformation_ver_ids[[war_tag]]]]
       plot_dep <- war_continuous[[war_tag]][[dep_input]]
-      plot_group <- war_categorical[[war_tag]][[group_input]]
-      if (ind_input %c% war_continuous_choices[[war_tag]]) {
-        plot_ind <- war_continuous[[war_tag]][[ind_input]]
-        sandbox_plot <- ggplot(data = war_dt, 
-                               mapping = aes_string(x     = plot_ind, 
-                                                    y     = plot_dep, 
-                                                    color = plot_group)) + 
-          guides(color = guide_legend(title = group_input)) + 
-          geom_point() + 
-          geom_smooth(method = 'lm')
-        if (input[[war_transformation_hor_ids[[war_tag]]]] == "Logarithm") {
-          sandbox_plot <- sandbox_plot + scale_x_log10()
-        }
-      } else {
-        plot_ind <- war_categorical[[war_tag]][[ind_input]]
-        if (ind_input == "None (All Data)") {
-          if (group_input == "None") {
-            sandbox_plot <- ggplot(mapping = aes(x = "", 
-                                                 y = war_dt[[plot_dep]]))
-          } else {
-            sandbox_plot <- ggplot(mapping = aes(x    = "", 
-                                                 y    = war_dt[[plot_dep]], 
-                                                 fill = war_dt[[plot_group]])) + 
-              guides(fill = guide_legend(title = group_input))
-          }
+      if (ind_input == "None (All Data)") {
+        make_stats_plot <- TRUE
+        make_points_plot <- FALSE
+        if (group_input == "None") {
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(dep = plot_dep), with = FALSE])
+          setnames(graph_dt, c("dep"))
+          sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = "", y = dep))
         } else {
-          sandbox_plot <- ggplot(data = war_dt, 
-                                 mapping = aes_string(x    = plot_ind, 
-                                                      y    = plot_dep, 
-                                                      fill = plot_group)) + 
+          plot_group <- war_categorical[[war_tag]][[group_input]]
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(dep = plot_dep, grp = plot_group), with = FALSE])
+          setnames(graph_dt, c("dep", "grp"))
+          graph_dt[["grp"]] %>% 
+            drop_levels(drop = empty_text) %>% 
+            otherize_levels_count(cutoff = count_cutoff, other = "others")
+          if (calculate_plotted_items(graph_dt, "grp") > subset_graph_threshold) {
+            graph_dt[["grp"]] %>%
+              otherize_levels_prop(cutoff = prop_cutoff, other = "others")
+            if (calculate_plotted_items(graph_dt, "grp") > subset_graph_threshold) {
+              graph_dt[["grp"]] %>% 
+                otherize_levels_rank(cutoff = rank_cutoff, other = "others", include_ties = FALSE)
+            }
+          }
+          sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = "", y = dep, fill = grp)) + 
             guides(fill = guide_legend(title = group_input))
         }
-        sandbox_plot <- sandbox_plot + 
-          geom_violin(draw_quantiles = c(0.25, 0.50, 0.75))
+        sandbox_plot <- sandbox_plot + geom_violin()
+      } else {
+        if (ind_input %c% war_continuous_choices[[war_tag]]) {
+          make_points_plot <- TRUE
+          make_stats_plot <- FALSE
+          plot_ind <- war_continuous[[war_tag]][[ind_input]]
+        } else {
+          make_stats_plot <- TRUE
+          make_points_plot <- FALSE
+          plot_ind <- war_categorical[[war_tag]][[ind_input]]
+        }
+        if (group_input == "None") {
+          grouped_plot <- FALSE
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(ind = plot_ind, dep = plot_dep), with = FALSE])
+          setnames(graph_dt, c("ind", "dep"))
+        } else {
+          grouped_plot <- TRUE
+          plot_group <- war_categorical[[war_tag]][[group_input]]
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(ind = plot_ind, dep = plot_dep, grp = plot_group), with = FALSE])
+          setnames(graph_dt, c("ind", "dep", "grp"))
+        }
+        graph_dt <- graph_dt[!is.na(dep), ]
+        if (make_stats_plot) {
+          graph_dt[["ind"]] %>% 
+            drop_levels(drop = empty_text) %>% 
+            otherize_levels_count(cutoff = count_cutoff, other = "others")
+          if (grouped_plot) {
+            graph_dt %>% otherize_groups_count("ind", "grp", cutoff = count_cutoff, other = "others")
+            if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+              graph_dt %>% otherize_groups_prop("ind", "grp", cutoff = prop_cutoff, other = "others")
+              if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+                graph_dt %>% otherize_groups_rank("ind", "grp", cutoff = rank_cutoff, other = "others",  include_ties = FALSE)
+              }
+            }
+          } else {
+            if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+              graph_dt[["ind"]] %>%
+                otherize_levels_prop(cutoff = prop_cutoff, other = "others")
+              if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+                graph_dt[["ind"]] %>% 
+                  otherize_levels_rank(cutoff = rank_cutoff, other = "others", include_ties = FALSE)
+              }
+            }
+          }
+          needs_reordering <- plot_ind != "Year" && plot_ind != "Month"
+          if (needs_reordering) {
+            graph_order <- graph_dt[, .(func = (function(x) median(x) + mean(x)/10)(dep)), by = ind][order(func)][["ind"]]
+            graph_dt[, ind := ordered(ind, levels = graph_order)]
+          }
+        } else {
+          graph_dt <- graph_dt[!is.na(ind), ]
+        }
+        sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = ind, y = dep))
+        if (grouped_plot) {
+          if (make_points_plot) {
+            sandbox_plot <- sandbox_plot + aes(color = grp) + 
+              guides(color = guide_legend(title = group_input))
+          } else {
+            sandbox_plot <- sandbox_plot + aes(fill = grp) + 
+              guides(fill = guide_legend(title = group_input))
+          }
+        }
       }
-      if (input[[war_transformation_ver_ids[[war_tag]]]] == "Logarithm") {
-        sandbox_plot <- sandbox_plot + scale_y_log10()
+      if (make_points_plot) {
+        sandbox_plot <- sandbox_plot + 
+          geom_point() + 
+          geom_smooth(method = 'lm')
+        if (transformation_horizontal == "Logarithm") {
+          sandbox_plot <- sandbox_plot + scale_x_log10()
+        }
+        if (transformation_vertical == "Logarithm") {
+          sandbox_plot <- sandbox_plot + scale_y_log10()
+        }
+      } else if (make_stats_plot) {
+        if (transformation_vertical == "Logarithm") {
+          sandbox_plot <- sandbox_plot + 
+            geom_violin(draw_quantiles = c(0.25, 0.50, 0.75), trim = FALSE) + 
+            stat_summary(fun.y = mean, geom = 'point', shape = 23, size = 2, position = position_dodge(width = 0.9)) + 
+            scale_y_log10()
+        } else {
+          sandbox_plot <- sandbox_plot + 
+            geom_violin(draw_quantiles = c(0.25, 0.50, 0.75), trim = FALSE) + 
+            stat_summary(fun.y = mean, geom = 'point', shape = 23, size = 2, position = position_dodge(width = 0.9))
+        }
+        if (ind_input != "None (All Data)") {
+          if (calculate_plotted_items(graph_dt, "ind", "grp") > coord_flip_threshold) {
+            sandbox_plot <- sandbox_plot + coord_flip()
+          }
+        }
       }
       sandbox_plot + 
         ggtitle(war_sandbox_title[[war_tag]]) + 
@@ -404,6 +508,16 @@ shinyServer(function(input, output, session) {
   }
   for (tag in war_tags) {
     output[[war_sandbox_ids[[tag]]]] <- sandbox_output(tag)
+  }
+  
+  calculate_plotted_items <- function(dt, var_colname, group_colname = NULL) {
+    assert_that(!is.null(var_colname), 
+                msg = "include the name of the column you're looking to plot (cannot be NULL)")
+    if (is.null(group_colname) || group_colname %!c% colnames(dt)) {
+      return (uniqueN(dt[[var_colname]]))
+    } else {
+      return (dt[, .(uniqueN = uniqueN(.SD)), .SDcols = var_colname, by = group_colname][, sum(uniqueN)])
+    }
   }
   
 
@@ -536,7 +650,7 @@ shinyServer(function(input, output, session) {
                              start = input$dateRange[1] + animation_delta(), 
                              end = input$dateRange[2] + animation_delta())
       } else {
-        Sys.sleep(animation_delays[[input$map_animate_delta]]*2)
+        Sys.sleep(animation_delays[[input$map_animate_delta]])
         animation_toggle(FALSE)
         updateDateRangeInput(session, 
                              inputId = "dateRange", 
@@ -831,6 +945,11 @@ shinyServer(function(input, output, session) {
   
   unique_from_filter <- memoise(unique_from_filter_slow)
   
+  dates_from_selection <- function(war_tag) {
+    dates <- (war_selection[[war_tag]])()[["Mission_Date"]]
+    return (list("first" = first(dates), "last" = last(dates)))
+  }
+  
   filter_selection <- function(war_tag, start_date = earliest_date, end_date = latest_date, regions = "All", targets = "All", countries = "All", aircrafts = "All", weapons = "All") {
     if ("All" %c% regions) {
       if ("All" %c% targets) {
@@ -960,13 +1079,13 @@ shinyServer(function(input, output, session) {
     
     if (start_date > war_first_missions[[war_tag]]) {
       if (end_date < war_last_missions[[war_tag]]) {
-        war_dt[Mission_Date >= start_date & Mission_Date <= end_date]
+        war_dt[Mission_Date >= start_date & Mission_Date <= end_date, nomatch = 0L]
       } else {
-        war_dt[Mission_Date >= start_date]
+        war_dt[Mission_Date >= start_date, nomatch = 0L]
       }
     } else {
       if (end_date < war_last_missions[[war_tag]]) {
-        war_dt[Mission_Date <= end_date]
+        war_dt[Mission_Date <= end_date, nomatch = 0L]
       } else {
         war_dt
       }
