@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 
 ### WW1 ---------------------------------------------------------------------
@@ -215,8 +215,7 @@ walk(clean_data[c(1,2,4,5)],
        dt[, `:=`(tooltip_datetime = NULL, 
                  tooltip_aircraft = NULL, 
                  tooltip_bombload = NULL, 
-                 tooltip_targetType = NULL, 
-                 tooltip_targetLocation = NULL)]
+                 tooltip_target = NULL)]
        })
 
 

@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 ### Code Graveyard ###
 # where buggy or formerly useful but now unnecessary code lays to rest
@@ -2914,5 +2914,214 @@ sandbox_output <- function(war_tag) {
         } else {
           items_to_plot <- uniqueN(graph_dt[["ind"]])
         }
+
+otherize_groups_prop <- function(dt, fact_name, group_name, cutoff, other = "other", both_ways = FALSE) {
+  dt_rows <- nrow(dt)
+  prop_table <- dt[, .(prop = .N / dt_rows), by = c(fact_name, group_name)]
+  for_removal <- prop_table[prop < cutoff, c(fact_name, group_name), with = FALSE]
+  for (c in seq_len(nrow(for_removal))) {
+    rows <- which(dt[[fact_name]] == for_removal[[fact_name]][[c]] & dt[[group_name]] == for_removal[[group_name]][[c]])
+    set(dt, i = rows, j = fact_name, value = other)
+    if (both_ways) {
+      set(dt, i = rows, j = group_name, value = other)
+    }
+  }
+}
+
+sandbox_output <- function(war_tag) {
+    force(war_tag)
+    renderPlot({
+      ind_input <- input[[war_sandbox_ind_ids[[war_tag]]]]
+      dep_input <- input[[war_sandbox_dep_ids[[war_tag]]]]
+      group_input <- input[[war_sandbox_grp_ids[[war_tag]]]]
+      # scaling_input <- input[[war_sandbox_scaling_ids[[war_tag]]]]#***
+      transformation_horizontal <- input[[war_transformation_hor_ids[[war_tag]]]]
+      transformation_vertical <- input[[war_transformation_ver_ids[[war_tag]]]]
+      
+      continuous_features <- war_continuous_choices[[war_tag]]
+      continuous_colnames <- war_continuous[[war_tag]]
+      categorical_features <- war_categorical_choices[[war_tag]]
+      categorical_colnames <- war_categorical[[war_tag]]
+      grouping_features <- war_grouping_choices[[war_tag]]
+      grouping_colnames <- war_grouping[[war_tag]]
+      
+      plot_dep <- war_continuous[[war_tag]][[dep_input]]
+      if (ind_input == all_data_label) {#***fix for categorical dep
+        make_points_plot <- FALSE
+        make_stats_plot <- TRUE
+        make_mosaic_plot <- FALSE
+        if (group_input == "None" || group_input %!c% grouping_features) {
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(dep = plot_dep), with = FALSE])
+          setnames(graph_dt, c("dep"))
+          sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = "", y = dep))
+        } else {
+          plot_group <- war_categorical[[war_tag]][[group_input]]
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(dep = plot_dep, grp = plot_group), with = FALSE])
+          setnames(graph_dt, c("dep", "grp"))
+          graph_dt[["grp"]] %>% 
+            drop_levels(drop = empty_text) %>% 
+            otherize_levels_count(cutoff = stat_count_cutoff, other = "others")
+          if (calculate_plotted_items(graph_dt, "grp") > subset_graph_threshold) {
+            graph_dt[["grp"]] %>%
+              otherize_levels_prop(cutoff = stat_prop_cutoff, other = "others")
+            if (calculate_plotted_items(graph_dt, "grp") > subset_graph_threshold) {
+              graph_dt[["grp"]] %>% 
+                otherize_levels_rank(cutoff = stat_rank_cutoff, other = "others", include_ties = FALSE)
+            }
+          }
+          sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = "", y = dep, fill = grp)) + 
+            guides(fill = guide_legend(title = group_input))
+        }
+        sandbox_plot <- sandbox_plot + geom_violin()
+      } else {
+        if (ind_input %c% continuous_features) {
+          if (dep_input %c% continuous_features) {
+            make_points_plot <- TRUE
+            make_stats_plot <- FALSE
+            make_mosaic_plot <- FALSE
+            plot_ind <- continuous_colnames[[ind_input]]
+            plot_dep <- continuous_colnames[[dep_input]]
+          } else {
+            make_points_plot <- FALSE
+            make_stats_plot <- TRUE
+            make_mosaic_plot <- FALSE
+            plot_ind <- continuous_colnames[[ind_input]]
+            plot_dep <- categorical_colnames[[dep_input]]
+          }
+        } else {
+          if (dep_input %c% continuous_features) {#***
+            make_points_plot <- FALSE
+            make_stats_plot <- TRUE
+            make_mosaic_plot <- FALSE
+            plot_ind <- categorical_colnames[[ind_input]]
+            plot_dep <- continuous_colnames[[dep_input]]
+          } else {
+            make_points_plot <- FALSE
+            make_stats_plot <- FALSE
+            make_mosaic_plot <- TRUE
+            plot_ind <- categorical_colnames[[ind_input]]
+            plot_dep <- categorical_colnames[[dep_input]]
+          }
+        }
+        if (group_input == "None" || group_input %!c% grouping_features) {
+          grouped_plot <- FALSE
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(ind = plot_ind, dep = plot_dep), with = FALSE])
+          setnames(graph_dt, c("ind", "dep"))
+          graph_dt <- graph_dt[!is.na(ind) & !is.na(dep), ]
+        } else {
+          grouped_plot <- TRUE
+          plot_group <- grouping_colnames[[group_input]]
+          graph_dt <- copy((war_selection[[war_tag]])()[, c(ind = plot_ind, dep = plot_dep, grp = plot_group), with = FALSE])
+          setnames(graph_dt, c("ind", "dep", "grp"))
+          graph_dt <- graph_dt[!is.na(ind) & !is.na(dep) & !is.na(grp), ]
+        }
+        if (make_stats_plot) {
+          graph_dt[["ind"]] %>% 
+            drop_levels(drop = empty_text) %>% 
+            otherize_levels_count(cutoff = stat_count_cutoff, other = "others")
+          if (grouped_plot) {
+            graph_dt %>% otherize_groups_count("ind", "grp", cutoff = stat_count_cutoff, other = "others")
+            if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+              graph_dt %>% otherize_groups_prop(cutoff = stat_prop_cutoff, 
+                                                group_cols = c("ind", "grp"), 
+                                                cols_to_otherize = "ind", 
+                                                other = "others")
+              if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+                graph_dt %>% otherize_groups_rank("ind", "grp", cutoff = stat_rank_cutoff, other = "others",  include_ties = FALSE)
+              }
+            }
+          } else {
+            if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+              graph_dt[["ind"]] %>%
+                otherize_levels_prop(cutoff = stat_prop_cutoff, other = "others")
+              if (calculate_plotted_items(graph_dt, "ind", "grp") > subset_graph_threshold) {
+                graph_dt[["ind"]] %>% 
+                  otherize_levels_rank(cutoff = stat_rank_cutoff, other = "others", include_ties = FALSE)
+              }
+            }
+          }
+          needs_reordering <- plot_ind != "Year" && plot_ind != "Month"
+          if (needs_reordering) {
+            graph_order <- graph_dt[, .(func = (function(x) median(x) + mean(x)/10)(dep)), by = ind][order(func)][["ind"]]
+            graph_dt[, ind := ordered(ind, levels = graph_order)]
+          }
+          sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = ind, y = dep))
+        } else if (make_mosaic_plot) {
+          graph_dt[["ind"]] %>% 
+            drop_levels(drop = empty_text) %>% 
+            otherize_levels_prop(cutoff = mosaic_prop_cutoff, other = "others")
+          graph_dt[["dep"]] %>% 
+            drop_levels(drop = empty_text) %>% 
+            otherize_levels_prop(cutoff = mosaic_prop_cutoff, other = "others")
+          if (grouped_plot) {
+            cols <- c("ind", "dep", "grp")
+          } else {
+            cols <- c("ind", "dep")
+          }
+          graph_dt %>% otherize_groups_prop(cutoff = mosaic_prop_cutoff, 
+                                            group_cols = cols, 
+                                            cols_to_otherize = cols, 
+                                            other = "others")
+          graph_dt <- graph_dt[, .N, by = cols]
+          sandbox_plot <- ggplot(data = graph_dt) + 
+            geom_mosaic(mapping = aes(weight = N, x = product(dep, ind), fill = dep), offset = mosaic_offset) + 
+            guides(fill = guide_legend(title = dep_input)) + 
+            scale_y_continuous(labels = percent) + 
+            coord_flip()
+          if (grouped_plot) {
+            sandbox_plot <- sandbox_plot + facet_grid(grp ~ .)
+          }
+        } else {
+          sandbox_plot <- ggplot(data = graph_dt, mapping = aes(x = ind, y = dep))
+        }
+        if (grouped_plot) {
+          if (make_points_plot) {
+            sandbox_plot <- sandbox_plot + aes(color = grp) + 
+              guides(color = guide_legend(title = group_input))
+          } else {
+            sandbox_plot <- sandbox_plot + aes(fill = grp) + 
+              guides(fill = guide_legend(title = group_input))
+          }
+        }
+      }
+      if (make_points_plot) {
+        sandbox_plot <- sandbox_plot + 
+          geom_point() + 
+          geom_smooth(method = 'lm')
+        if (transformation_horizontal == "Logarithm") {
+          sandbox_plot <- sandbox_plot + scale_x_log10()
+        }
+        if (transformation_vertical == "Logarithm") {
+          sandbox_plot <- sandbox_plot + scale_y_log10()
+        }
+      } else if (make_stats_plot) {
+        if (transformation_vertical == "Logarithm") {
+          sandbox_plot <- sandbox_plot + 
+            geom_violin(draw_quantiles = c(0.25, 0.50, 0.75), trim = FALSE) + 
+            stat_summary(fun.y = mean, geom = 'point', shape = 23, size = 2, position = position_dodge(width = 0.9)) + 
+            scale_y_log10()
+        } else {
+          # wanted to make trim = TRUE, but there's sometimes a fatal error when geom_violin draws quantiles on heavily skewed trimmed violins, 
+          # I'm guessing because it trims before the quantile on the compressed side and doesn't know where to draw the quantile line
+          sandbox_plot <- sandbox_plot + 
+            geom_violin(draw_quantiles = c(0.25, 0.50, 0.75), trim = FALSE) + 
+            stat_summary(fun.y = mean, geom = 'point', shape = 23, size = 2, position = position_dodge(width = 0.9))
+        }
+        if (ind_input != all_data_label) {
+          if (calculate_plotted_items(graph_dt, "ind", "grp") > coord_flip_threshold) {
+            sandbox_plot <- sandbox_plot + coord_flip()
+          }
+        }
+      }
+      sandbox_plot + 
+        ggtitle(war_sandbox_title[[war_tag]]) + 
+        xlab(ind_input) + 
+        ylab(dep_input) + 
+        theme_bw()
+    })
+  }
+  for (tag in war_tags) {
+    output[[war_sandbox_ids[[tag]]]] <- sandbox_output(tag)
+  }
 
 

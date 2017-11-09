@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 
 ### Constructors ------------------------------------------------------------
@@ -184,7 +184,6 @@ overview_map_sample_mod <- function() {
 
 war_hist_slider <- function(war_tag) {
   box(width = 12,
-      #height = 200,
       sliderInput(inputId = paste0(war_tag, "_hist_slider"), 
                   label = "# of bins", 
                   value = war_init_bins[[war_tag]], 
@@ -195,7 +194,6 @@ war_hist_slider <- function(war_tag) {
 
 war_transformation_ver <- function(war_tag) {
   box(width = 12,
-      #height = 100,
       selectizeInput(inputId = paste0(war_tag, "_transformation_ver"), 
                      label = "Apply vertical transformation?", 
                      choices = c("None", "Logarithm"), 
@@ -205,7 +203,6 @@ war_transformation_ver <- function(war_tag) {
 
 war_transformation_hor <- function(war_tag) {
   box(width = 12,
-      #height = 100,
       selectizeInput(inputId = paste0(war_tag, "_transformation_hor"), 
                      label = "Apply horizontal transformation?", 
                      choices = c("None", "Logarithm"), 
@@ -215,30 +212,27 @@ war_transformation_hor <- function(war_tag) {
 
 war_sandbox_ind <- function(war_tag) {
   box(width = 12,
-      #height = 100,
-      selectizeInput(inputId = paste0(war_tag, "_sandbox_ind"), 
+      selectizeInput(inputId = war_sandbox_ind_ids[[war_tag]], 
                      label = "Which independent variable?", 
-                     choices = c("None (All Data)", war_all_choices[[war_tag]]), 
+                     choices = c(all_data_label, war_all_choices[[war_tag]]), 
                      selected = c("Year"), 
                      multiple = FALSE))
 }
 
 war_sandbox_dep <- function(war_tag) {
   box(width = 12,
-      #height = 100,
-      selectizeInput(inputId = paste0(war_tag, "_sandbox_dep"), 
+      selectizeInput(inputId = war_sandbox_dep_ids[[war_tag]], 
                      label = "Which dependent variable?", 
-                     choices = war_continuous_choices[[war_tag]], 
+                     choices = c("Count", war_all_choices[[war_tag]]), 
                      selected = c("Number of Attacking Aircraft"), 
                      multiple = FALSE))
 }
 
-war_sandbox_group <- function(war_tag) {
+war_sandbox_grp <- function(war_tag) {
   box(width = 12,
-      #height = 100,
-      selectizeInput(inputId = paste0(war_tag, "_sandbox_group"), 
+      selectizeInput(inputId = war_sandbox_grp_ids[[war_tag]], 
                      label = "Group by what?", 
-                     choices = c("None", war_categorical_choices[[war_tag]]), 
+                     choices = c("None", war_grouping_choices[[war_tag]]), 
                      selected = c("None"), 
                      multiple = FALSE)
   )
@@ -282,8 +276,10 @@ datatable_output <- function() {
 }
 
 war_plot_outputs <- function(war_tag) {
-  fluidRow(box(plotOutput(war_hist_ids[[war_tag]])),
-           box(plotOutput(war_sandbox_ids[[war_tag]])))
+  fluidRow(box(plotOutput(height = graph_height, 
+                          war_hist_ids[[war_tag]])),
+           box(plotOutput(height = graph_height, 
+                          war_sandbox_ids[[war_tag]])))
 }
 
 war_plot_mods <- function(war_tag) {
@@ -295,7 +291,7 @@ war_plot_mods <- function(war_tag) {
     column(width = 6, 
            war_sandbox_ind(war_tag), 
            war_sandbox_dep(war_tag), 
-           war_sandbox_group(war_tag))
+           war_sandbox_grp(war_tag))
   )
 }
 

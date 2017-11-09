@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 
 ### Developer Control -------------------------------------------------------
@@ -41,6 +41,7 @@ sidebar_width <- 240
 title_width <- 360
 map_height <- 640
 map_width <- 1024
+graph_height <- "600px"
 video_height <- 480
 video_width <- 640
 image_height <- 768
@@ -68,11 +69,15 @@ civilian_max <- 0.05
 civilian_radius <- 15
 
 # graph parameters
+min_breaks <- 6L
+max_breaks <- 12L
 coord_flip_threshold <- 12L
 subset_graph_threshold <- 48L
-count_cutoff <- 3L
-prop_cutoff <- 0.001
-rank_cutoff <- subset_graph_threshold
+stat_count_cutoff <- 3L
+stat_prop_cutoff <- 0.001
+stat_rank_cutoff <- subset_graph_threshold
+mosaic_prop_cutoff <- 0.01
+mosaic_offset <- 0.005
 # high_cutoff <- 5L
 # low_cutoff <- 5L
 # boxplot_width <- 0.2

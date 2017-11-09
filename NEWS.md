@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 
 ### Version History ###
@@ -115,6 +115,7 @@ Notes: sidebar and other parts reduced to what works
 
 0.9.9	Added animation
 	Added cinema and maps
+	Improved sandbox plots
 	Added Wikipedia links to and reformatted tooltips
 	Functionalized more regex code
 	Further reduced redundant code

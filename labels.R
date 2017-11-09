@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 
 ### Overview Tab ------------------------------------------------------------
@@ -50,7 +50,21 @@ Vietnam_datatable_colnames <- c("Date", "Airforce", "Target Country",           
 war_datatable_colnames <- list(WW1_datatable_colnames, WW2_datatable_colnames, Korea_datatable_colnames, Vietnam_datatable_colnames)
 
 
+### Graphing Tabs -----------------------------------------------------------
+
+all_data_label <- "None (All Data)"
+count_label <- "Count"
+
+
 ### WW1 ---------------------------------------------------------------------
+
+WW1_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
+                      "Altitude at Bomb Drop" = "Bomb_Altitude_Feet", 
+                      "Number of Bombs Dropped" = "Weapon_Expended_Num", 
+                      "Weight of Bombs Dropped" = "Weapon_Weight_Pounds", 
+                      "Bombload (weight of bombs per plane)" = "Aircraft_Bombload_Pounds", 
+                      "Number of Aircraft Lost/Destroyed" = "Casualties_Friendly")
+WW1_continuous_choices = names(WW1_continuous)
 
 WW1_categorical = list("Operation Supported" = "Operation", 
                        "Military Regiment" = "Unit_Service", 
@@ -67,18 +81,21 @@ WW1_categorical = list("Operation Supported" = "Operation",
                        "Month" = "Month_name")
 WW1_categorical_choices = names(WW1_categorical)
 
-WW1_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
-                      "Altitude at Bomb Drop" = "Bomb_Altitude_Feet", 
-                      "Number of Bombs Dropped" = "Weapon_Expended_Num", 
-                      "Weight of Bombs Dropped" = "Weapon_Weight_Pounds", 
-                      "Bombload (weight of bombs per plane)" = "Aircraft_Bombload_Pounds", 
-                      "Number of Aircraft Lost/Destroyed" = "Casualties_Friendly")
-WW1_continuous_choices = names(WW1_continuous)
+WW1_all_choices <- c(WW1_continuous_choices, WW1_categorical_choices)
 
-WW1_all_choices <- c(WW1_categorical_choices, WW1_continuous_choices)
+WW1_grouping <- limited_subset(WW1_clean, WW1_categorical, grouping_limit)
+WW1_grouping_choices <- names(WW1_grouping)
 
 
 ### WW2 ---------------------------------------------------------------------
+
+WW2_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
+                      "Altitude at Bomb Drop" = "Bomb_Altitude_Feet", 
+                      "Number of Bombs Dropped" = "Weapon_Expended_Num", 
+                      "Weight of Bombs Dropped" = "Weapon_Weight_Pounds", 
+                      "Number of Aircraft Lost/Destroyed" = "Aircraft_Lost_Num", 
+                      "Number of Aircraft Damaged" = "Aircraft_Damaged_Num")
+WW2_continuous_choices = names(WW2_continuous)
 
 WW2_categorical = list("Theater of Operations" = "Mission_Theater", 
                        "Military Regiment" = "Unit_Service", 
@@ -98,18 +115,22 @@ WW2_categorical = list("Theater of Operations" = "Mission_Theater",
                        "Month" = "Month_name")
 WW2_categorical_choices = names(WW2_categorical)
 
-WW2_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
-                      "Altitude at Bomb Drop" = "Bomb_Altitude_Feet", 
-                      "Number of Bombs Dropped" = "Weapon_Expended_Num", 
-                      "Weight of Bombs Dropped" = "Weapon_Weight_Pounds", 
-                      "Number of Aircraft Lost/Destroyed" = "Aircraft_Lost_Num", 
-                      "Number of Aircraft Damaged" = "Aircraft_Damaged_Num")
-WW2_continuous_choices = names(WW2_continuous)
+WW2_all_choices <- c(WW2_continuous_choices, WW2_categorical_choices)
 
-WW2_all_choices <- c(WW2_categorical_choices, WW2_continuous_choices)
+WW2_grouping <- limited_subset(WW2_clean, WW2_categorical, grouping_limit)
+WW2_grouping_choices <- names(WW2_grouping)
 
 
 ### Korea -------------------------------------------------------------------
+
+Korea_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
+                        "Altitude at Bomb Drop" = "Bomb_Altitude_Feet", 
+                        "Number of Bombs Dropped" = "Weapon_Num", 
+                        "Weight of Bombs Dropped" = "Weapon_Weight_Pounds", 
+                        "Bombload (weight of bombs per plane)" = "Aircraft_Bombload_Calculated_Pounds", 
+                        "Number of Aircraft Lost" = "Aircraft_Lost_Num", 
+                        "Number of Aircraft Aborted" = "Aircraft_Aborted_Num")
+Korea_continuous_choices = names(Korea_continuous)
 
 Korea_categorical = list("Military Division" = "Unit_Squadron", 
                          "Mission Type" = "Mission_Type", 
@@ -124,19 +145,21 @@ Korea_categorical = list("Military Division" = "Unit_Squadron",
                          "Month" = "Month_name")
 Korea_categorical_choices = names(Korea_categorical)
 
-Korea_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
-                        "Altitude at Bomb Drop" = "Bomb_Altitude_Feet", 
-                        "Number of Bombs Dropped" = "Weapon_Num", 
-                        "Weight of Bombs Dropped" = "Weapon_Weight_Pounds", 
-                        "Bombload (weight of bombs per plane)" = "Aircraft_Bombload_Calculated_Pounds", 
-                        "Number of Aircraft Lost" = "Aircraft_Lost_Num", 
-                        "Number of Aircraft Aborted" = "Aircraft_Aborted_Num")
-Korea_continuous_choices = names(Korea_continuous)
+Korea_all_choices <- c(Korea_continuous_choices, Korea_categorical_choices)
 
-Korea_all_choices <- c(Korea_categorical_choices, Korea_continuous_choices)
+Korea_grouping <- limited_subset(Korea_clean2, Korea_categorical, grouping_limit)
+Korea_grouping_choices <- names(Korea_grouping)
 
 
 ### Vietnam -----------------------------------------------------------------
+
+Vietnam_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
+                          "Altitude at Bomb Drop" = "Bomb_Altitude", 
+                          "Number of Bombs Dropped" = "Weapon_Expended_Num", 
+                          "Number of Bombs Jettisoned" = "Weapon_Jettisoned_Num", 
+                          "Number of Bombs Returned" = "Weapon_Returned_Num", 
+                          "Flight Hours" = "Flight_Hours")
+Vietnam_continuous_choices = names(Vietnam_continuous)
 
 Vietnam_categorical = list("Operation Supported" = "Operation", 
                            "Military Regiment" = "Unit_Service", 
@@ -154,15 +177,10 @@ Vietnam_categorical = list("Operation Supported" = "Operation",
                            "Month" = "Month_name")
 Vietnam_categorical_choices = names(Vietnam_categorical)
 
-Vietnam_continuous = list("Number of Attacking Aircraft" = "Aircraft_Attacking_Num", 
-                          "Altitude at Bomb Drop" = "Bomb_Altitude", 
-                          "Number of Bombs Dropped" = "Weapon_Expended_Num", 
-                          "Number of Bombs Jettisoned" = "Weapon_Jettisoned_Num", 
-                          "Number of Bombs Returned" = "Weapon_Returned_Num", 
-                          "Flight Hours" = "Flight_Hours")
-Vietnam_continuous_choices = names(Vietnam_continuous)
+Vietnam_all_choices <- c(Vietnam_continuous_choices, Vietnam_categorical_choices)
 
-Vietnam_all_choices <- c(Vietnam_categorical_choices, Vietnam_continuous_choices)
+Vietnam_grouping <- limited_subset(Vietnam_clean, Vietnam_categorical, grouping_limit)
+Vietnam_grouping_choices <- names(Vietnam_grouping)
 
 
 ### Binnings ----------------------------------------------------------------
@@ -225,11 +243,13 @@ commander_maps_ids <- list(WW1     = paste0("commander_map_", WW1, c("_1", "_2")
 
 ### Lookup Tables -----------------------------------------------------------
 
-war_categorical <- list(WW1_categorical, WW2_categorical, Korea_categorical, Vietnam_categorical)
-war_categorical_choices <- list(WW1_categorical_choices, WW2_categorical_choices, Korea_categorical_choices, Vietnam_categorical_choices)
 war_continuous <- list(WW1_continuous, WW2_continuous, Korea_continuous, Vietnam_continuous)
 war_continuous_choices <- list(WW1_continuous_choices, WW2_continuous_choices, Korea_continuous_choices, Vietnam_continuous_choices)
+war_categorical <- list(WW1_categorical, WW2_categorical, Korea_categorical, Vietnam_categorical)
+war_categorical_choices <- list(WW1_categorical_choices, WW2_categorical_choices, Korea_categorical_choices, Vietnam_categorical_choices)
 war_all_choices <- list(WW1_all_choices, WW2_all_choices, Korea_all_choices, Vietnam_all_choices)
+war_grouping <- list(WW1_grouping, WW2_grouping, Korea_grouping, Vietnam_grouping)
+war_grouping_choices <- list(WW1_grouping_choices, WW2_grouping_choices, Korea_grouping_choices, Vietnam_grouping_choices)
 
 
 ### Graphs ------------------------------------------------------------------
@@ -249,9 +269,9 @@ war_sandbox_title <- c(WW1_sandbox_title, WW2_sandbox_title, Korea_sandbox_title
 war_hist_ids <- paste0("hist_", war_tags)
 war_sandbox_ids <- paste0("sandbox_", war_tags)
 
-war_sandbox_group_ids <- paste0(war_tags, "_sandbox_group")
 war_sandbox_ind_ids <- paste0(war_tags, "_sandbox_ind")
 war_sandbox_dep_ids <- paste0(war_tags, "_sandbox_dep")
+war_sandbox_grp_ids <- paste0(war_tags, "_sandbox_grp")
 war_hist_slider_ids <- paste0(war_tags, "_hist_slider")
 war_transformation_hor_ids <- paste0(war_tags, "_transformation_hor")
 war_transformation_ver_ids <- paste0(war_tags, "_transformation_ver")
@@ -297,16 +317,18 @@ walk(list(war_labels,
           commander_text_id, 
           commander_text_box_id, 
           commander_maps_box_id, 
-          war_categorical, 
-          war_categorical_choices, 
           war_continuous, 
           war_continuous_choices, 
+          war_categorical, 
+          war_categorical_choices, 
           war_all_choices, 
+          war_grouping, 
+          war_grouping_choices, 
           war_histogram_title, 
           war_sandbox_title, 
           war_hist_ids, 
           war_sandbox_ids, 
-          war_sandbox_group_ids, 
+          war_sandbox_grp_ids, 
           war_sandbox_ind_ids, 
           war_sandbox_dep_ids, 
           war_hist_slider_ids, 

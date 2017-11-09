@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.3
-# @date 2017-11-07 19:30
+# @version 0.9.9.4
+# @date 2017-11-09 00:30
 
 
 ### Local Values ------------------------------------------------------------
@@ -885,10 +885,10 @@ ordered_empty_at_end <- function(column, empty_string) {
   if ("" %c% ordered_levels) {
     ordered_levels <- c(ordered_levels %[!=]% "", empty_string)
     return (ordered(replace_level(column, from = "", to = empty_string), levels = ordered_levels))
-  } else if (empty_string %c% ordered_levels) {
-    ordered_levels <- c(ordered_levels %[!=]% empty_string, empty_string)
-    return (ordered(column, levels = ordered_levels))
   } else {
+    if (empty_string %c% ordered_levels) {
+      ordered_levels <- c(ordered_levels %[!=]% empty_string, empty_string)
+    }
     return (ordered(column, levels = ordered_levels))
   }
 }
