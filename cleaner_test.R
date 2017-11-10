@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Context -----------------------------------------------------------------
@@ -26,11 +26,11 @@ test_that("no data column is completely empty or identical across all rows", {
 test_that("no text column is excessively long", {
   walk(bomb_data, 
       function(dt) dt %>% keep(is.character) %>% 
-        map_int(~expect_lt(max(nchar(levels(as.factor(.)))), max_string_length)))
+        map_int(~expect_lt(max(nchar(levels(as.factor(.))), na.rm = TRUE), max_string_length)))
   
   walk(bomb_data, 
        function(dt) dt %>% keep(is.factor) %>% 
-         map_int(~expect_lt(max(nchar(levels(.))), max_string_length)))
+         map_int(~expect_lt(max(nchar(levels(.)), na.rm = TRUE), max_string_length)))
 })
 
 
@@ -159,7 +159,7 @@ test_that("none of the levels have names", {
          walk(~expect_null(names(levels(.)))))
 })
 
-test_that("none of the data has names", {
+test_that("none of the datasets have names", {
   walk(bomb_data, 
        function(dt) dt %>% 
          walk(~expect_null(names(.))))

@@ -1,12 +1,12 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Developer Control -------------------------------------------------------
 
 # debug control
-debug_mode_on <- TRUE
+debug_mode_on <- FALSE
 debug_sample_size <- 1024
 
 # data refresh
@@ -17,7 +17,7 @@ full_write <- FALSE
 use_compiler <- TRUE
 
 # parallel settings
-use_parallel <- TRUE
+use_parallel <- FALSE
 
 
 ### writing data

@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### WW1 Column Names --------------------------------------------------------
@@ -326,12 +326,12 @@ WW2_col_classes <- list(numeric = c("WWII_ID",
                                    "TARGET_COMMENT",
                                    "MISSION_COMMENTS",
                                    "SOURCE",
-                                   "DATABASE_EDIT_COMMENTS"),
+                                   "DATABASE_EDIT_COMMENTS"))#,
 
-                        NULL = c("SOURCE_LATITUDE",
-                                 "SOURCE_LONGITUDE",
-                                 "MDS",
-                                 "ROUNDS_AMMO"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
+                        # NULL = c("SOURCE_LATITUDE",
+                        #          "SOURCE_LONGITUDE",
+                        #          "MDS",
+                        #          "ROUNDS_AMMO"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
 
 
 ### Korea 1 Column Classes --------------------------------------------------
@@ -398,15 +398,15 @@ Korea_col_classes2 <- list(numeric = c("NBR_ATTACK_EFFEC_AIRCRAFT",
                                       "MISSION_TYPE",
                                       "NOSE_FUZE",
                                       "TAIL_FUZE",
-                                      "RECORD_SOURCE"), 
+                                      "RECORD_SOURCE"))#, 
 
-                           NULL = c("SOURCE_UTM_JAPAN_B",
-                                    "SOURCE_TGT_UTM",
-                                    "TGT_MGRS",
-                                    "SOURCE_TGT_LAT",
-                                    "SOURCE_TGT_LONG",
-                                    "TOT",
-                                    "CALLSIGN"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
+                           # NULL = c("SOURCE_UTM_JAPAN_B",
+                           #          "SOURCE_TGT_UTM",
+                           #          "TGT_MGRS",
+                           #          "SOURCE_TGT_LAT",
+                           #          "SOURCE_TGT_LONG",
+                           #          "TOT",
+                           #          "CALLSIGN"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
 
 
 ### Vietnam Column Classes --------------------------------------------------
@@ -454,14 +454,14 @@ Vietnam_col_classes <- list(numeric = c("THOR_DATA_VIET_ID",
                                        "MFUNC",
                                        "MFUNC_DESC_CLASS",
                                        "RESULTSBDA", 
-                                       "TIMEOFFTARGET"), 
+                                       "TIMEOFFTARGET"))#, 
 
-                            NULL = c("AIRFORCEGROUP",
-                                     "AIRFORCESQDN",
-                                     "WEAPONTYPECLASS",
-                                     "TGTORIGCOORDS",
-                                     "TGTORIGCOORDSFORMAT",
-                                     "RELEASEFLTSPEED"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
+                            # NULL = c("AIRFORCEGROUP",
+                            #          "AIRFORCESQDN",
+                            #          "WEAPONTYPECLASS",
+                            #          "TGTORIGCOORDS",
+                            #          "TGTORIGCOORDSFORMAT",
+                            #          "RELEASEFLTSPEED"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
 
 
 ### Read Data ---------------------------------------------------------------

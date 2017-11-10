@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Local Values ------------------------------------------------------------
@@ -874,7 +874,7 @@ month_num_to_name <- function(month_strings) {
 ### Bomb Damage Estimate ----------------------------------------------------
 
 damage_radius <- function(bomb_weights) {
-  return (sqrt(pmax((bomb_weights %NA% 100L), 100L) * 2 / pi))
+  return (sqrt(pmax((if_else(is.na(bomb_weights), 100L, bomb_weights)), 100L) * 2 / pi))
 }
 
 

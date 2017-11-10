@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Setup -------------------------------------------------------------------
@@ -170,6 +170,10 @@ WW1_bombs %>% select("Route_Details",
 
 WW1_bombs[["Aircraft_Type"]] %>% 
   format_levels(format_aircraft_types %,% proper_noun_phrase_aircraft_vectorized)
+
+# fill out missing countries by city
+WW1_bombs %>% 
+  fill_matching_values(code_col = "Target_City", value_col = "Target_Country")
 
 # reduced columns
 WW1_bombs[, Target_Category := Target_Type][["Target_Category"]] %>% 
@@ -545,7 +549,7 @@ WW2_bombs[["Target_City"]] %>%
   format_levels(remove_parentheticals %,% remove_square_brackets) %>% 
   rename_similar_levels(changes = target_city_rules) %>% 
   format_levels(proper_noun_phrase_vectorized) %>% 
-  drop_levels(drop = c("Battle", "Convoy", "Mt", "Mt on"))
+  drop_levels(drop = c("Battle", "Convoy", "Mt", "Mt on")) %>% 
   rename_levels(changes = c("Beaumont sur Oise"    = "Beaum", 
                             "Beaumont le Roger"    = "Beaumdnt le Roger", 
                             "Czelldomolk"          = "Czelldomdlk", 
@@ -629,11 +633,11 @@ WW2_bombs[["Target_Priority"]] %>%
   format_levels(tolower)
 
 # fill out matching codes and values
-fact_cols = c("Target_Country", 
-              "Target_City", 
-              "Target_Industry", 
-              "Target_Priority", 
-              "Sighting_Method")
+value_cols = c("Target_Country", 
+               "Target_City", 
+               "Target_Industry", 
+               "Target_Priority", 
+               "Sighting_Method")
 code_cols = c("Target_Country_Code", 
               "Target_City_Code", 
               "Target_Industry_Code", 
@@ -642,11 +646,13 @@ code_cols = c("Target_Country_Code",
 WW2_bombs[, (code_cols) := lapply(.SD, factor, exclude = NULL), .SDcols = code_cols]
 
 WW2_bombs %>% 
-  fill_matching_values_by_col(code_cols = code_cols, value_cols = value_cols, drop.codes = TRUE, backfill = TRUE)
+  fill_matching_values_by_col(code_cols = code_cols, value_cols = value_cols, drop.codes = TRUE, backfill = TRUE, drop.values = TRUE, NA_code = NA_character_)
+
+WW2_bombs[, (code_cols) := lapply(.SD, as.integer), .SDcols = code_cols]
 
 # fill out missing countries by city
 WW2_bombs %>% 
-  fill_matching_values(code_col = "Target_City", value_col = "Target_Country", NA_level_code = "", NA_level_value = "")
+  fill_matching_values(code_col = "Target_City", value_col = "Target_Country", drop.codes = TRUE, drop.values = TRUE)
 
 # long weapons types and numbers cleaning script
 source('WW2_weapon_cleaning.R')
@@ -786,11 +792,11 @@ Korea_bombs2[, Weapon_Unit_Weight := as.integer(if_else(Weapon_Unit_Weight %like
 Korea_bombs2[, Weapon_Weight_Pounds := Aircraft_Attacking_Num * Aircraft_Bombload_Calculated_Pounds]
 
 # general fixes, numerics
-Korea_bombs2[, Target_Latitude  := grem(pattern = "[^\\d.]*", Target_Latitude)]
+Korea_bombs2[, Target_Latitude  := grem(pattern = "[^0-9.]*", Target_Latitude)]
 Korea_bombs2[, Target_Latitude  := as.numeric(if_else(Target_Latitude == "", 
                                                       NA_character_, 
                                                       Target_Latitude))]
-Korea_bombs2[, Target_Longitude := grem(pattern = "[^\\d.]*", Target_Longitude)]
+Korea_bombs2[, Target_Longitude := grem(pattern = "[^0-9.]*", Target_Longitude)]
 Korea_bombs2[, Target_Longitude := as.numeric(if_else(Target_Longitude == "", 
                                                       NA_character_, 
                                                       Target_Longitude))]
@@ -1107,10 +1113,13 @@ Vietnam_bombs[["Takeoff_Location"]] %>%
 Vietnam_bombs[, Mission_Function_Code := as.integer(if_else(Mission_Function_Code == "", 
                                                             NA_character_, 
                                                             as.character(Mission_Function_Code)))]
+Vietnam_bombs[, Mission_Function_Code := factor(Mission_Function_Code, exclude = NULL)]
 
 # fill out matching codes and values
 Vietnam_bombs %>% 
-  fill_matching_values_(Mission_Function_Code, Mission_Function, drop.codes = TRUE, backfill = TRUE)
+  fill_matching_values_(Mission_Function_Code, Mission_Function, drop.codes = TRUE, backfill = TRUE, drop.values = TRUE, NA_code = NA_character_)
+
+Vietnam_bombs[, Mission_Function_Code := as.integer(Mission_Function_Code)]
 
 # reduced columns
 Vietnam_bombs[, Target_Category := Target_Type][["Target_Category"]] %>% 

@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Package Functions -------------------------------------------------------
@@ -950,69 +950,156 @@ otherize_groups_base <- function(dt, for_removal, group_cols, cols_to_otherize, 
   }
 }
 
+NA_of_same_type <- function(thing, factor_as_blank = TRUE) {
+  return (switch(class(thing), 
+                 "integer"   = NA_integer_, 
+                 "numeric"   = NA_real_, 
+                 "factor"    = if.else(factor_as_blank, "", factor(NA)), 
+                 "character" = NA_character_, 
+                 "logical"   = NA))
+}
+
+NA_of_same_type_by_col <- function(thing, cols = colnames(thing), factor_as_blank = TRUE) {
+  NAs <- list()
+  for (col in cols) {
+    NAs <- append(NAs, NA_of_same_type(thing[[col]], factor_as_blank = factor_as_blank))
+  }
+  return (NAs)
+}
+
 if (is_package_loaded("data.table")) {
-  fill_matching_values <- function(data, code_col, value_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_level_value = "", NA_level_code = NA_character_, assume.exclusive = FALSE) {
-    code_to_values <- eval(parse(text = paste0("data[as.integer(", value_col, ") != ", as.character(NA_index(data[[value_col]], NA_level_value)), "L, .('codes' = ", code_col, ", 'values' = ", value_col, ")]")))
-    code_to_values <- unique(code_to_values[as.integer(codes) != NA_index(code_to_values[["codes"]], NA_level_code), ])
+  # currently requires both codes and values to be factors before calling the function
+  # need to ensure NAs are handled properly
+  # need to also ensure that different types of missing/incomplete values are handled (what if "" and NA are both present?)
+  fill_matching_values <- function(data, code_col, value_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_code = NA_of_same_type(data[[code_col]]), NA_value = NA_of_same_type(data[[value_col]]), assume.exclusive = FALSE) {
+    NA_index_value <- NA_index(data[[value_col]], NA_value)
+    if (is_empty(NA_index_value)) {
+      code_to_values <- eval(parse(text = paste0("data[, .('codes' = ", code_col, ", 'values' = ", value_col, ")]")))
+    } else {
+      code_to_values <- eval(parse(text = paste0("data[as.integer(", value_col, ") != ", as.character(NA_index_value), "L, .('codes' = ", code_col, ", 'values' = ", value_col, ")]")))
+    }
+    NA_index_code <- NA_index(code_to_values[["codes"]], NA_code)
+    if (is_empty(NA_index_code)) {
+      code_to_values <- unique(code_to_values)
+    } else {
+      code_to_values <- unique(code_to_values[as.integer(codes) != NA_index_code, ])
+    }
     code_to_values <- code_to_values[, .(values, 'GRPN' = .N), keyby = codes]
     indeterminate_codes <- code_to_values[GRPN > 1L, as.character(unique(codes))]
-    value_NA_index <- NA_index(data[[value_col]], NA_level_value)
     if (assume.exclusive) {
-      for (a_code in indeterminate_codes) {
-        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_col, " == a_code & as.integer(", value_col, ") != ", as.character(value_NA_index), "L, ", value_col, "]"))))
+      for (a_code in indeterminate_codes) {#*** more possibly empty NA_index_value instances below
+        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_col, " == a_code & as.integer(", value_col, ") != ", as.character(NA_index_value), "L, ", value_col, "]"))))
         replace_levels(code_to_values[["values"]], from = present_levels[["others"]], to = present_levels[["mode"]])
       }
     } else {
       for (a_code in indeterminate_codes) {
-        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_col, " == a_code & as.integer(", value_col, ") != ", as.character(value_NA_index), "L, ", value_col, "]"))))
+        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", code_col, " == a_code & as.integer(", value_col, ") != ", as.character(NA_index_value), "L, ", value_col, "]"))))
         set(code_to_values, i = which(code_to_values[["codes"]] == a_code), j = "values", present_levels[["mode"]])
       }
-    }
+    }#*** some of below may also need to be under !assume.exclusive
     code_to_values <- unique(code_to_values[, .(codes, values)])
     verified_codes <- code_to_values[["codes"]]
-    if (drop.codes) {
-      all_codes <- unique(data[[code_col]] %[]% (as.integer(.) != NA_index(data[[code_col]], NA_level_code)))
-      unverified_codes <- all_codes %d% verified_codes
-      drop_levels(data[[code_col]], drop = unverified_codes, to = NA_level_code)
-    }
-    slicer <- as.integer(data[[code_col]]) != NA_index(data[[code_col]], NA_level_code)
-    joined_data <- eval(parse(text = paste0('code_to_values[data, .(values), on = c("codes"="', code_col, '")]')))
-    eval(parse(text = paste0("data[slicer, ", value_col, ' := joined_data[["values"]][slicer]]')))
-    if (backfill) {
-      value_to_codes <- eval(parse(text = paste0("data[as.integer(", code_col, ") != ", as.character(NA_index(data[[code_col]], NA_level_code)), "L, .('values' = ", value_col, ", 'codes' = ", code_col, ")]")))
-      value_to_codes <- unique(value_to_codes[as.integer(values) != NA_index(data[[value_col]], NA_level_value), ])
-      value_to_codes <- value_to_codes[, .(codes, 'GRPN' = .N), keyby = values]
-      indeterminate_values <- value_to_codes[GRPN > 1L, as.character(unique(values))]
-      code_NA_index <- NA_index(data[[code_col]], NA_level_code)
-      if (assume.exclusive) {
-        for (a_value in indeterminate_values) {
-          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", value_col, " == a_value & as.integer(", code_col, ") != ", as.character(code_NA_index), "L, ", code_col, "]"))))
-          replace_levels(value_to_codes[["codes"]], from = present_levels[["others"]], to = present_levels[["mode"]])
-        }
+    
+    NA_index_code <- NA_index(data[[code_col]], NA_code)
+    if (is_empty(NA_index_code)) {
+      all_codes <- levels(data[[code_col]])
+    } else {
+      if (is.na(NA_code)) {
+        all_codes <- unique(data[[code_col]] %[]% (as.integer(.) != NA_index_code))
       } else {
-        for (a_value in indeterminate_values) {
-          present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", value_col, " == a_value & as.integer(", code_col, ") != ", as.character(code_NA_index), "L, ", code_col, "]"))))
-          set(value_to_codes, i = which(value_to_codes[["values"]] == a_value), j = "codes", present_levels[["mode"]])
-        }
+        all_codes <- levels(data[[code_col]]) %[!=]% ""
       }
-      value_to_codes <- unique(value_to_codes[, .(values, codes)])
-      verified_values <- value_to_codes[["values"]]
+    }
+    unverified_codes <- all_codes %d% verified_codes
+    
+    if (is_empty(unverified_codes)) {
+      code_to_values_for_join <- code_to_values
+    } else {
+      if (drop.codes) {
+        drop_levels(data[[code_col]], drop = unverified_codes, to = NA_code)
+        code_to_values_for_join <- rbindlist(list(code_to_values, data.table(codes = NA_code, values = NA_value)))
+      } else {
+        code_to_values_for_join <- rbindlist(list(code_to_values, data.table(codes = unverified_codes, values = NA_value)))
+      }
+    }
+    
+    joined_data <- eval(parse(text = paste0("code_to_values_for_join[data, .(values), on = c('codes' = '", code_col, "')]")))
+    NA_index_code <- NA_index(data[[code_col]], NA_code)
+    if (!is_empty(NA_index_code)) {
+      slicer <- as.integer(data[[code_col]]) != NA_index_code
+      eval(parse(text = paste0("data[slicer, ", value_col, " := joined_data[['values']][slicer]]")))#*** maybe rewrite using set()
+    } else {
+      eval(parse(text = paste0("data[, ", value_col, " := joined_data[['values']]")))#*** maybe rewrite using set()
+    }
+    
+    NA_index_code <- NA_index(data[[code_col]], NA_code)
+    if (is_empty(NA_index_code)) {
+      value_to_codes <- eval(parse(text = paste0("data[, .('values' = ", value_col, ", 'codes' = ", code_col, ")]")))
+    } else {
+      value_to_codes <- eval(parse(text = paste0("data[as.integer(", code_col, ") != ", as.character(NA_index_code), "L, .('values' = ", value_col, ", 'codes' = ", code_col, ")]")))
+    }
+    NA_index_value <- NA_index(value_to_codes[["values"]], NA_value)
+    if (is_empty(NA_index_value)) {
+      value_to_codes <- unique(value_to_codes)
+    } else {
+      value_to_codes <- unique(value_to_codes[as.integer(values) != NA_index_value, ])
+    }
+    value_to_codes <- value_to_codes[, .(codes, 'GRPN' = .N), keyby = values]
+    indeterminate_values <- value_to_codes[GRPN > 1L, as.character(unique(values))]
+    if (assume.exclusive) {
+      for (a_value in indeterminate_values) {#*** more possibly empty NA_index_value instances below
+        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", value_col, " == a_value & as.integer(", code_col, ") != ", as.character(NA_index_code), "L, ", code_col, "]"))))
+        replace_levels(value_to_codes[["codes"]], from = present_levels[["others"]], to = present_levels[["mode"]])
+      }
+    } else {
+      for (a_value in indeterminate_values) {
+        present_levels <- mode_and_others_factor(eval(parse(text = paste0("data[", value_col, " == a_value & as.integer(", code_col, ") != ", as.character(NA_index_code), "L, ", code_col, "]"))))
+        set(value_to_codes, i = which(value_to_codes[["values"]] == a_value), j = "codes", present_levels[["mode"]])
+      }
+    }
+    value_to_codes <- unique(value_to_codes[, .(values, codes)])
+    verified_values <- value_to_codes[["values"]]
+    
+    NA_index_value <- NA_index(data[[value_col]], NA_value)
+    if (is_empty(NA_index_value)) {
+      all_values <- levels(data[[value_col]])
+    } else {
+      if (is.na(NA_value)) {
+        all_values <- unique(data[[value_col]] %[]% (as.integer(.) != NA_index_value))
+      } else {
+        all_values <- levels(data[[value_col]]) %[!=]% ""
+      }
+    }
+    unverified_values <- all_values %d% verified_values
+    
+    if (is_empty(unverified_values)) {
+      value_to_codes_for_join <- value_to_codes
+    } else {
       if (drop.values) {
-        all_values <- unique(data[[value_col]] %[]% (as.integer(.) != NA_index(data[[value_col]], NA_level_value)))
-        unverified_values <- all_values %d% verified_values
-        drop_levels(data[[value_col]], drop = unverified_values, to = NA_level_value)
+        drop_levels(data[[value_col]], drop = unverified_values, to = NA_value)
+        value_to_codes_for_join <- rbindlist(list(value_to_codes, data.table(values = NA_value, codes = NA_code)))
+      } else {
+        value_to_codes_for_join <- rbindlist(list(value_to_codes, data.table(values = unverified_values, codes = NA_code)))
       }
-      slicer <- as.integer(data[[value_col]]) != NA_index(data[[value_col]], NA_level_value)
-      joined_data <- eval(parse(text = paste0('value_to_codes[data, .(codes), on = c("values"="', value_col, '")]')))
-      eval(parse(text = paste0("data[slicer, ", code_col, ' := joined_data[["codes"]][slicer]]')))
+    }
+    
+    if (backfill) {
+      joined_data <- eval(parse(text = paste0("value_to_codes_for_join[data, .(codes), on = c('values' = '", value_col, "')]")))
+      NA_index_value <- NA_index(data[[value_col]], NA_value)
+      if (!is_empty(NA_index_value)) {
+        slicer <- as.integer(data[[value_col]]) != NA_index_value
+        eval(parse(text = paste0("data[slicer, ", code_col, " := joined_data[['codes']][slicer]]")))#*** maybe rewrite using set()
+      } else {
+        eval(parse(text = paste0("data[, ", code_col, " := joined_data[['codes']]]")))#*** maybe rewrite using set()
+      }
     }
     invisible(data)
   }
   
-  fill_matching_values_ <- function(data, code_col, value_col, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_level_value = "", NA_level_code = NA_character_, assume.exclusive = FALSE) {
+  fill_matching_values_ <- function(data, code_col, value_col, ...) {
     code_col <- deparse(substitute(code_col))
     value_col <- deparse(substitute(value_col))
-    fill_matching_values(data, code_col, value_col, drop.codes, backfill, drop.values, NA_level_value, NA_level_code, assume.exclusive)
+    fill_matching_values(data, code_col, value_col, ...)
   }
   
   correct_mistakes <- function() {
@@ -1151,18 +1238,18 @@ otherize_levels_prop_by_col <- function(data, cutoff, other = "other", exact = F
   invisible(data)
 }
 
-fill_matching_values_by_col <- function(data, code_cols, value_cols, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_level_value = "", NA_level_code = NA_character_, assume.exclusive = FALSE) {
+fill_matching_values_by_col <- function(data, code_cols, value_cols, drop.codes = FALSE, backfill = FALSE, drop.values = FALSE, NA_code = NA_of_same_type_by_col(select(data, code_cols)), NA_value = NA_of_same_type_by_col(select(data, value_cols)), assume.exclusive = FALSE) {
   assert_that(length(value_cols) == length(code_cols), 
               msg = "There is a different number of value and code columns")
   num_cols <- length(value_cols)
   drop.codes       <- recycle_arguments(drop.codes,       num_cols)
   backfill         <- recycle_arguments(backfill,         num_cols)
   drop.values      <- recycle_arguments(drop.values,      num_cols)
-  NA_level_value   <- recycle_arguments(NA_level_value,   num_cols)
-  NA_level_code    <- recycle_arguments(NA_level_code,    num_cols)
+  NA_value         <- recycle_arguments(NA_value,         num_cols)
+  NA_code          <- recycle_arguments(NA_code,          num_cols)
   assume.exclusive <- recycle_arguments(assume.exclusive, num_cols)
   for (i in seq_along(value_cols)) {
-    fill_matching_values(data, code_col = code_cols[[i]], value_col = value_cols[[i]], drop.codes = drop.codes[[i]], backfill = backfill[[i]], drop.values = drop.values[[i]], NA_level_value = NA_level_value[[i]], NA_level_code = NA_level_code[[i]], assume.exclusive = assume.exclusive[[i]])
+    fill_matching_values(data, code_col = code_cols[[i]], value_col = value_cols[[i]], drop.codes = drop.codes[[i]], backfill = backfill[[i]], drop.values = drop.values[[i]], NA_value = NA_value[[i]], NA_code = NA_code[[i]], assume.exclusive = assume.exclusive[[i]])
   }
   invisible(data)
 }

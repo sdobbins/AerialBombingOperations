@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Import Packages ---------------------------------------------------------
@@ -135,7 +135,8 @@ if (!has_clean_data()) {
     }
   } else {
     started.at <- proc.time()
-    load(most_recent_save_filepath)
+    load('Shiny_downsampled_2017-11-10.RData')
+    # load(most_recent_save_filepath)
     debug_message(paste0("Loaded in ", timetaken(started.at)))
   }
   
@@ -168,5 +169,28 @@ if (debug_mode_on) {
 
 # for iteration
 war_data <- list(WW1_clean, WW2_clean, Korea_clean2, Vietnam_clean)
-re_name(war_data, war_tags)
+
+# grouping subsets for graphs
+grouping_limit <- 12L
+
+WW1_grouping <- limited_subset(WW1_clean, WW1_categorical, grouping_limit)
+WW1_grouping_choices <- names(WW1_grouping)
+
+WW2_grouping <- limited_subset(WW2_clean, WW2_categorical, grouping_limit)
+WW2_grouping_choices <- names(WW2_grouping)
+
+Korea_grouping <- limited_subset(Korea_clean2, Korea_categorical, grouping_limit)
+Korea_grouping_choices <- names(Korea_grouping)
+
+Vietnam_grouping <- limited_subset(Vietnam_clean, Vietnam_categorical, grouping_limit)
+Vietnam_grouping_choices <- names(Vietnam_grouping)
+
+war_grouping <- list(WW1_grouping, WW2_grouping, Korea_grouping, Vietnam_grouping)
+war_grouping_choices <- list(WW1_grouping_choices, WW2_grouping_choices, Korea_grouping_choices, Vietnam_grouping_choices)
+
+# renaming
+walk(list(war_data, 
+          war_grouping, 
+          war_grouping_choices), 
+     ~re_name(., war_tags))
 

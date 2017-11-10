@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.5
+# @date 2017-11-10 16:00
 
 
 ### Overview Tab ------------------------------------------------------------
@@ -83,9 +83,6 @@ WW1_categorical_choices = names(WW1_categorical)
 
 WW1_all_choices <- c(WW1_continuous_choices, WW1_categorical_choices)
 
-WW1_grouping <- limited_subset(WW1_clean, WW1_categorical, grouping_limit)
-WW1_grouping_choices <- names(WW1_grouping)
-
 
 ### WW2 ---------------------------------------------------------------------
 
@@ -117,9 +114,6 @@ WW2_categorical_choices = names(WW2_categorical)
 
 WW2_all_choices <- c(WW2_continuous_choices, WW2_categorical_choices)
 
-WW2_grouping <- limited_subset(WW2_clean, WW2_categorical, grouping_limit)
-WW2_grouping_choices <- names(WW2_grouping)
-
 
 ### Korea -------------------------------------------------------------------
 
@@ -146,9 +140,6 @@ Korea_categorical = list("Military Division" = "Unit_Squadron",
 Korea_categorical_choices = names(Korea_categorical)
 
 Korea_all_choices <- c(Korea_continuous_choices, Korea_categorical_choices)
-
-Korea_grouping <- limited_subset(Korea_clean2, Korea_categorical, grouping_limit)
-Korea_grouping_choices <- names(Korea_grouping)
 
 
 ### Vietnam -----------------------------------------------------------------
@@ -178,9 +169,6 @@ Vietnam_categorical = list("Operation Supported" = "Operation",
 Vietnam_categorical_choices = names(Vietnam_categorical)
 
 Vietnam_all_choices <- c(Vietnam_continuous_choices, Vietnam_categorical_choices)
-
-Vietnam_grouping <- limited_subset(Vietnam_clean, Vietnam_categorical, grouping_limit)
-Vietnam_grouping_choices <- names(Vietnam_grouping)
 
 
 ### Binnings ----------------------------------------------------------------
@@ -248,8 +236,6 @@ war_continuous_choices <- list(WW1_continuous_choices, WW2_continuous_choices, K
 war_categorical <- list(WW1_categorical, WW2_categorical, Korea_categorical, Vietnam_categorical)
 war_categorical_choices <- list(WW1_categorical_choices, WW2_categorical_choices, Korea_categorical_choices, Vietnam_categorical_choices)
 war_all_choices <- list(WW1_all_choices, WW2_all_choices, Korea_all_choices, Vietnam_all_choices)
-war_grouping <- list(WW1_grouping, WW2_grouping, Korea_grouping, Vietnam_grouping)
-war_grouping_choices <- list(WW1_grouping_choices, WW2_grouping_choices, Korea_grouping_choices, Vietnam_grouping_choices)
 
 
 ### Graphs ------------------------------------------------------------------
@@ -322,8 +308,6 @@ walk(list(war_labels,
           war_categorical, 
           war_categorical_choices, 
           war_all_choices, 
-          war_grouping, 
-          war_grouping_choices, 
           war_histogram_title, 
           war_sandbox_title, 
           war_hist_ids, 
