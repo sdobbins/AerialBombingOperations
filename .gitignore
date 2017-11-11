@@ -13,6 +13,8 @@ THOR/*
 # types of files
 *.csv
 /*.csv
+*.txt
+/*.txt
 *.jpg
 /*.jpg
 *.pdf
