@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.4
-# @date 2017-11-09 00:30
+# @version 0.9.9.6
+# @date 2017-11-17 01:00
 
 ### Code Graveyard ###
 # where buggy or formerly useful but now unnecessary code lays to rest
@@ -3123,5 +3123,116 @@ sandbox_output <- function(war_tag) {
   for (tag in war_tags) {
     output[[war_sandbox_ids[[tag]]]] <- sandbox_output(tag)
   }
+
+if (numbers[[upper_index]] < ref) {
+              return (numbers[[upper_index]])
+            } else if (numbers[[lower_index]] > ref) {
+              return (ref %[!=]% ref)
+            } else if (numbers[[lower_index]] == ref) {
+              if (or_equal_to) {
+                return (numbers[[lower_index]])
+              } else {
+                return (ref %[!=]% ref)
+              }
+            } else if (numbers[[upper_index]] == ref) {
+              if (or_equal_to) {
+                return (numbers[[upper_index]])
+              } else {
+                return (numbers[[upper_index - 1L]])
+              }
+            }
+
+fix_crap <- function(lines, dictionary) {
+  lines_mod <- gsub(pattern = "([,()/-])", replacement = " \\1 ", lines)
+  num_lines <- length(lines)
+  
+  split_result <- strsplit(lines_mod, split = " ", fixed = TRUE)
+  split_lengths <- lengths(split_result)
+  combined_words <- unlist(split_result, use.names = FALSE)
+  is_valid_word <- is_valid_word_vectorized(combined_words, dictionary) | combined_words %like% "[,()/-]" | combined_words == ""
+  is_invalid_word <- !is_valid_word
+  is_and <- combined_words == "and"
+  is_comma <- combined_words == ","
+  split_sizes <- rep(1:num_lines, split_lengths)
+  
+  is_valid_word_column <- split(is_valid_word, split_sizes)
+  is_invalid_word_column <- split(is_invalid_word, split_sizes)
+  is_and_column <- split(is_and, split_sizes)
+  is_comma_column <- split(is_comma, split_sizes)
+  
+  is_previous_comma <- map2(is_comma_column, map(is_invalid_word_column, ~shift(., 2L, fill = FALSE, "lead")), `&`)
+  is_twice_previous_comma <- map2(is_comma_column, map(is_invalid_word_column, ~shift(., 3L, fill = FALSE, "lead")), `&`)
+  is_previous_and <- map2(is_and_column, map(is_invalid_word_column, ~shift(., 1L, fill = FALSE, "lead")), `&`)
+  is_comma_before_and <- map2(is_twice_previous_comma, map(is_previous_and, ~shift(., 2L, fill = FALSE, "lead")), `&`)
+  
+  is_previous_bridge <- map2(is_comma_before_and, is_previous_and, `|`)
+  
+  is_subsequent_and <- map2(is_and_column, map(is_invalid_word_column, ~shift(., 1L, fill = FALSE, "lag")), `&`)
+  is_subsequent_comma <- map2(is_comma_column, map(is_invalid_word_column, ~shift(., 1L, fill = FALSE, "lag")), `&`)
+  is_subsequent_bridge <- map2(is_subsequent_and, is_subsequent_comma, `|`)
+  is_previous_removed <- map(map2(is_previous_comma, is_previous_and, `|`), ~shift(., 1L, fill = FALSE, "lag"))
+  is_previous_not_removed <- map(is_previous_removed, `!`)
+  is_subsequent_bridge_and_previous_not_removed <- map2(map(is_previous_not_removed, ~shift(., 1L, fill = FALSE, "lag")), is_subsequent_bridge, `&`)
+  
+  is_removable <- reduce(list(is_invalid_word_column, is_previous_bridge, is_subsequent_bridge_and_previous_not_removed), map2, `|`)
+  is_keepable <- map(is_removable, `!`)
+  is_remaining_before_comma_and <- map2(is_keepable, map(is_comma_before_and, ~shift(., 1L, fill = FALSE, "lead")), `&`)
+  is_and_needing_saving <- map(is_remaining_before_comma_and, ~shift(., 3L, fill = FALSE, "lag"))
+  which_is_and_twice_after_remaining_before_comma_and <- map(is_and_needing_saving, which)
+  which_is_comma <- map(is_comma_column, which)
+  which_is_remaining_before_comma_and <- map(is_remaining_before_comma_and, which)
+  which_is_remaining_twice_after_comma_yet_before_comma_and <- map2(map2(which_is_comma, which_is_remaining_before_comma_and, closest_to, but_less_than = TRUE, sorted = TRUE), 2L, `+`)
+  
+  reinsertion_necessary <- !map_lgl(which_is_remaining_twice_after_comma_yet_before_comma_and, is_empty)
+  
+  is_keepable <- map2(is_keepable, is_and_needing_saving, `|`)
+  is_removable <- map(is_keepable, `!`)
+  
+  is_removable_vector <- unlist(is_removable, use.names = FALSE)
+  combined_words[is_removable_vector] <- ""
+  
+  filtered_lines <- split(combined_words, split_sizes)
+  
+  filtered_lines <- pmap(list(filtered_lines, reinsertion_necessary, which_is_and_twice_after_remaining_before_comma_and, which_is_remaining_twice_after_comma_yet_before_comma_and), ~(if.else(..2, remove_and_reinsert(..1, from = ..3, at = ..4), ..1)))
+  
+  filtered_lines_reduced <- trimws(gsubs(patterns     = c(" ([,()/-]) ", "-?\\b[a-z]\\b-?", " +"), 
+                                          replacements = c("\\1",         "",                " "), 
+                                          map_chr(filtered_lines, paste0, collapse = " ")))
+  
+  return (if_else(lines == "", "", filtered_lines_reduced))
+}
+
+gsubs <- function(x, patterns, replacements, ...) {
+  num_patterns <- length(patterns)
+  assert_that(num_patterns == length(replacements) || length(replacements) == 1L, 
+              msg = "The lengths of the patterns and replacements supplied do not match")
+  if (num_patterns > 1L) {
+    replacements <- recycle_arguments(replacements, num_patterns)
+    for (i in seq_along(patterns)) {
+      x <- gsub(pattern = patterns[[i]], replacement = replacements[[i]], x)
+    }
+  }
+  return (x)
+}
+
+add_commas_vectorized2 <- function(numbers) {
+  numbers_strings <- as.character(numbers)
+  
+  number_string_splits <- strsplit(numbers_strings, "")
+  
+  nums_digits <- lengths(number_string_splits)
+  max_digits <- max(nums_digits, na.rm = TRUE)
+  num_rounds <- round_to_int(ceiling(max_digits / 3) - 2L)
+  
+  head_lengths <- 3L - (-nums_digits %% 3L)
+  
+  number_string_splits <- pmap(list(number_string_splits, nums_digits, head_lengths), ~(if.else(..2 > 3L, c(..1[c(1L:..3)], ",", ..1[c((..3+1L):..2)]), c(..1))))
+  
+  for (round in seq(num_rounds)) {
+    number_string_splits <- pmap(list(number_string_splits, nums_digits, head_lengths), ~(if.else(..2 > (3L + 3L*round), c(..1[c(1L:(..3 + 4L*round))], ",", ..1[c((..3 + 1L + 4L*round):(..2 + round))]), c(..1))))
+  }
+  
+  return (map_chr(number_string_splits, paste0, collapse = ""))
+}
 
 

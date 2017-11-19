@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.5
-# @date 2017-11-10 16:00
+# @version 0.9.9.6
+# @date 2017-11-19 01:00
 
 
 ### Setup -------------------------------------------------------------------
@@ -92,15 +92,10 @@ WW1_bombs[Bomb_Altitude_Feet == 0L,
 WW1_bombs[Bomb_Altitude_Feet > WW1_altitude_max_feet, 
           `:=`(Bomb_Altitude_Feet = WW1_altitude_max_feet)]
 
-WW1_bombs[Target_Latitude %!between% c(-90, 90), 
+WW1_bombs[Target_Latitude %!between% c(-90, 90) | Target_Latitude == 0, 
           `:=`(Target_Latitude = NA_real_)]
-
-WW1_bombs[Target_Longitude %!between% c(-180, 180), 
-          `:=`(Target_Latitude = NA_real_)]
-
-WW1_bombs[Target_Latitude == 0 & Target_Longitude == 0, 
-          `:=`(Target_Latitude = NA_real_, 
-               Target_Longitude = NA_real_)]
+WW1_bombs[Target_Longitude %!between% c(-180, 180) | Target_Longitude == 0, 
+          `:=`(Target_Longitude = NA_real_)]
 
 # general fixes, times
 WW1_bombs[["Takeoff_Time"]] %>% 
@@ -142,6 +137,7 @@ WW1_bombs[["Target_City"]] %>%
   drop_levels(drop = "OTHER") %>% 
   format_levels(remove_parentheticals) %>% 
   rename_similar_levels(changes = target_city_rules) %>% 
+  rename_similar_levels(changes = and_preceding(word(any_of(English_prepositions_for_place_names_upper)))) %>% 
   format_levels(proper_noun_phrase_vectorized)
 
 WW1_bombs[["Operation"]] %>% 
@@ -150,9 +146,11 @@ WW1_bombs[["Operation"]] %>%
 
 WW1_bombs[["Target_Type"]] %>% 
   format_levels(remove_parentheticals) %>% 
-  drop_similar_levels(drop = "UNKNOWN", exact = TRUE) %>% 
   rename_similar_levels(changes = target_rules) %>% 
-  format_levels(tolower)
+  format_levels(tolower) %>% 
+  format_levels(fix_invalid_words, 
+                dictionary = dictionary_20k_plus, 
+                exclude = c(measurement_units, "unidentified", "unknown"))
 
 WW1_bombs[["Route_Details"]] %>% 
   drop_levels(drop = "NONE")
@@ -162,7 +160,7 @@ WW1_bombs %>% select("Takeoff_Day_Period",
   format_levels_by_col(tolower)
 
 WW1_bombs[["Target_Country"]] %>% 
-  format_levels(capitalize_from_caps)
+  format_levels(proper_noun_phrase_vectorized)
 
 WW1_bombs %>% select("Route_Details", 
                      "Takeoff_Base") %>% 
@@ -171,9 +169,13 @@ WW1_bombs %>% select("Route_Details",
 WW1_bombs[["Aircraft_Type"]] %>% 
   format_levels(format_aircraft_types %,% proper_noun_phrase_aircraft_vectorized)
 
+# fill out missing countries by service
+WW1_bombs %>% 
+  fill_matching_values(code_col = "Unit_Service", value_col = "Unit_Country", drop.missing.levels = TRUE)
+
 # fill out missing countries by city
 WW1_bombs %>% 
-  fill_matching_values(code_col = "Target_City", value_col = "Target_Country")
+  fill_matching_values(code_col = "Target_City", value_col = "Target_Country", drop.missing.levels = TRUE)
 
 # reduced columns
 WW1_bombs[, Target_Category := Target_Type][["Target_Category"]] %>% 
@@ -213,17 +215,17 @@ WW2_bombs %>%
                               "Weapon_Frag_Type"))
 
 # new columns
-WW2_bombs[, Weapon_Expl_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Expl_Type)]
+WW2_bombs[, Weapon_Expl_Unit_Weight := grem(Weapon_Expl_Type, pattern = "\\D[ -~]*")]
 WW2_bombs[, Weapon_Expl_Unit_Weight := as.integer(if_else(Weapon_Expl_Unit_Weight %like% "\\d+", 
                                                           Weapon_Expl_Unit_Weight, 
                                                           NA_character_))]
 
-WW2_bombs[, Weapon_Incd_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Incd_Type)]
+WW2_bombs[, Weapon_Incd_Unit_Weight := grem(Weapon_Incd_Type, pattern = "\\D[ -~]*")]
 WW2_bombs[, Weapon_Incd_Unit_Weight := as.integer(if_else(Weapon_Incd_Unit_Weight %like% "\\d+", 
                                                           Weapon_Incd_Unit_Weight, 
                                                           NA_character_))]
 
-WW2_bombs[, Weapon_Frag_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Frag_Type)]
+WW2_bombs[, Weapon_Frag_Unit_Weight := grem(Weapon_Frag_Type, pattern = "\\D[ -~]*")]
 WW2_bombs[, Weapon_Frag_Unit_Weight := as.integer(if_else(Weapon_Frag_Unit_Weight %like% "\\d+", 
                                                           Weapon_Frag_Unit_Weight, 
                                                           NA_character_))]
@@ -378,18 +380,15 @@ WW2_bombs[, Aircraft_Airborne_Num := as.integer(Aircraft_Airborne_Num)] # gets f
 WW2_bombs[Target_Industry_Code >= 100, 
           `:=`(Target_Industry_Code = as.integer(Target_Industry_Code / 10))]
 
-WW2_bombs[, Target_Priority_Code := grem(pattern = "[A-Z]*", Target_Priority_Code)]
+WW2_bombs[, Target_Priority_Code := grem(Target_Priority_Code, pattern = "[A-Z]*")]
 WW2_bombs[, Target_Priority_Code := as.integer(if_else(Target_Priority_Code == "", 
                                                        NA_character_, 
                                                        Target_Priority_Code))] # gets forced to character somehow
 
-WW2_bombs[Target_Latitude %!between% c(-90, 90), 
+WW2_bombs[Target_Latitude %!between% c(-90, 90) | Target_Latitude == 0, 
           `:=`(Target_Latitude = NA_real_)]
-WW2_bombs[Target_Longitude %!between% c(-180, 180), 
+WW2_bombs[Target_Longitude %!between% c(-180, 180) | Target_Longitude == 0, 
           `:=`(Target_Latitude = NA_real_)]
-WW2_bombs[Target_Latitude == 0 & Target_Longitude == 0, 
-          `:=`(Target_Latitude = NA_real_, 
-               Target_Longitude = NA_real_)]
 WW2_bombs[Target_Longitude %between% c(0, 20) & 
             Target_Latitude < 20 & Target_Country == "TUNISIA", 
           `:=`(Target_Latitude = Target_Latitude + 30)]
@@ -456,6 +455,7 @@ WW2_bombs %>% keep(is.factor) %>% discard(is.ordered) %>%
   format_levels_by_col(remove_bad_formatting)
 
 # string column error fixes
+WW2_original_targets <- copy(WW2_bombs[, .(Target_City, Target_Type)])#***
 offending_targets <- target_names %which!in% c("UNIDENTIFIED", "UNKNOWN, BAY, HILL, POINT")
 WW2_bombs[Target_City %contain% word(offending_targets) & 
             Target_Type == "", 
@@ -544,12 +544,14 @@ WW2_bombs[["Weapon_Frag_Type"]] %>%
 
 WW2_bombs[["Target_City"]] %>% 
   drop_levels(drop = c("UNKNOWN", "UNIDENTIFIED")) %>% 
-  drop_levels_formula(expr = (grem(., pattern = "[ NSEW]+") %like% "^[\\d.]+$")) %>% 
   rename_similar_levels(changes = c("LONGSTOP" = "\\b(LONG STOP)\\b")) %>% 
+  drop_levels_formula(expr = (grem(., pattern = "[ NSEW]+") %like% "^[\\d.]+$")) %>% 
   format_levels(remove_parentheticals %,% remove_square_brackets) %>% 
   rename_similar_levels(changes = target_city_rules) %>% 
+  rename_similar_levels(changes = and_preceding(word(any_of(English_prepositions_for_place_names_upper)))) %>% 
+  rename_similar_levels(changes = "\\b ?[A-Z]$") %>% 
+  drop_levels(drop = c("BATTLE", "CONVOY")) %>% #*** this may be useful information if Target_Type is undefined
   format_levels(proper_noun_phrase_vectorized) %>% 
-  drop_levels(drop = c("Battle", "Convoy", "Mt", "Mt on")) %>% 
   rename_levels(changes = c("Beaumont sur Oise"    = "Beaum", 
                             "Beaumont le Roger"    = "Beaumdnt le Roger", 
                             "Czelldomolk"          = "Czelldomdlk", 
@@ -564,57 +566,75 @@ WW2_bombs[["Target_City"]] %>%
                             "Wittlich"             = "Wiltlich"))
 
 WW2_bombs[["Target_Type"]] %>% 
-  drop_similar_levels(drop = "\\b(UNID|UNDENT)") %>% 
   rename_similar_levels(changes = target_rules) %>% 
   format_levels(tolower)
+WW2_half_formatted_targets <- WW2_bombs[["Target_Type"]]#***
+WW2_bombs[["Target_Type"]] %>% 
+  format_levels(fix_invalid_words, 
+                dictionary = dictionary_20k_plus, 
+                exclude = c(measurement_units, "unidentified", "unknown"))
 
 WW2_bombs[["Target_Country"]] %>% 
   drop_similar_levels(drop = "UNKNOWN", exact = TRUE) %>% 
   rename_similar_levels(changes = " MINING", exact = TRUE) %>% 
-  rename_levels(changes = c("Papua New Guinea" = "PAPUA NEW GUINEA, MANUS ISLAND", 
-                            "India"            = "ANDAMAN ISLANDS", 
-                            "Papua New Guinea" = "BISMARK ARCHIPELAGO", 
-                            "Papua New Guinea" = "BOUGAINVILLE", 
-                            "Indonesia"        = "BALI", 
-                            "Micronesia"       = "CAROLINE ISLANDS", 
-                            "Indonesia"        = "CELEBES ISLANDS", 
-                            "Papua New Guinea" = "CORAL SEA AREA", 
-                            "France"           = "CORSICA", 
-                            "Greece"           = "CRETE", 
-                            "Ethiopia"         = "ETHIOPIA/ABSINNYA", 
-                            "Vietnam"          = "FRENCH INDO CHINA", 
-                            "Libya"            = "FRENCH WEST AFRICA", 
-                            "Micronesia"       = "GILBERT ISLANDS", 
-                            "Netherlands"      = "HOLLAND OR NETHERLANDS", 
-                            "India"            = "INDIAN OCEAN", 
-                            "Korea"            = "KOREA OR CHOSEN", 
-                            "Japan"            = "KURILE ISLANDS", 
-                            "Malay States"     = "MAYLAYSIA", 
-                            "China"            = "MANCHURIA", 
-                            "Japan"            = "MARCUS ISLANDS", 
-                            "Micronesia"       = "MARSHALL ISLANDS", 
-                            "Indonesia"        = "NETHERLANDS EAST INDIES", 
-                            "Papua New Guinea" = "NEW GUINEA", 
-                            "Papua New Guinea" = "NEW IRELAND", 
-                            "Micronesia"       = "PALAU ISLANDS", 
-                            "Italy"            = "PANTELLARIA", 
-                            "Philippines"      = "PHILIPPINE ISLANDS", 
-                            "Italy"            = "SARDINIA", 
-                            "Italy"            = "SICILY", 
-                            "Indonesia"        = "SUMATRA", 
-                            "Thailand"         = "THAILAND OR SIAM", 
-                            "Indonesia"        = "TIMOR", 
-                            "Japan"            = "VOLCANO AND BONIN ISLANDS", 
-                            "Micronesia"       = "WAKE ISLAND")) %>% 
+  rename_levels(changes = c("Papua New Guinea"           = "PAPUA NEW GUINEA, MANUS ISLAND", 
+                            "India"                      = "ANDAMAN ISLANDS", 
+                            "Papua New Guinea"           = "BISMARK ARCHIPELAGO", 
+                            "Papua New Guinea"           = "BOUGAINVILLE", 
+                            "Indonesia"                  = "BALI", 
+                            "Micronesia"                 = "CAROLINE ISLANDS", 
+                            "Indonesia"                  = "CELEBES ISLANDS", 
+                            "Papua New Guinea"           = "CORAL SEA AREA", 
+                            "France"                     = "CORSICA", 
+                            "Greece"                     = "CRETE", 
+                            "Ethiopia"                   = "ETHIOPIA/ABSINNYA", 
+                            "Formosa and Ryukyu Islands" = "FORMOSA", 
+                            "Vietnam"                    = "FRENCH INDO CHINA", 
+                            "Libya"                      = "FRENCH WEST AFRICA", 
+                            "Micronesia"                 = "GILBERT ISLANDS", 
+                            "Netherlands"                = "HOLLAND OR NETHERLANDS", 
+                            "India"                      = "INDIAN OCEAN", 
+                            "Korea"                      = "KOREA OR CHOSEN", 
+                            "Japan"                      = "KURILE ISLANDS", 
+                            "Malay States"               = "MAYLAYSIA", 
+                            "China"                      = "MANCHURIA", 
+                            "Japan"                      = "MARCUS ISLANDS", 
+                            "Micronesia"                 = "MARSHALL ISLANDS", 
+                            "Indonesia"                  = "NETHERLANDS EAST INDIES", 
+                            "Papua New Guinea"           = "NEW GUINEA", 
+                            "Papua New Guinea"           = "NEW IRELAND", 
+                            "Micronesia"                 = "PALAU ISLANDS", 
+                            "Italy"                      = "PANTELLARIA", 
+                            "Philippines"                = "PHILIPPINE ISLANDS", 
+                            "Italy"                      = "SARDINIA", 
+                            "Italy"                      = "SICILY", 
+                            "Indonesia"                  = "SUMATRA", 
+                            "Thailand"                   = "THAILAND OR SIAM", 
+                            "Indonesia"                  = "TIMOR", 
+                            "Japan"                      = "VOLCANO AND BONIN ISLANDS", 
+                            "Micronesia"                 = "WAKE ISLAND")) %>% 
   format_levels(proper_noun_phrase_vectorized)
+
+# WW2_bombs[Target_City == "Acqualagna", Target_Country := "Germany"]
+# WW2_bombs[Target_City == "Berat", Target_Country := "Albania"]
+# WW2_bombs[Target_City == "Berlin", Target_Country := "Germany"]
+# WW2_bombs[Target_City == "Faisi Island", Target_Country := "Solomon Islands"]
+# WW2_bombs[Target_City == "Fuiloro", Target_Country := "Indonesia"]
+# WW2_bombs[Target_City == "Magur", Target_Country := "Micronesia"]
+# WW2_bombs[Target_City == "Maizuru", Target_Country := "Japan"]
+# WW2_bombs[Target_City == "Okayama", Target_Country := "Japan"]
+# 
+# WW2_bombs[Target_City == "Brod" & Target_Country == "Romania", Target_City := "Brad"]
 
 WW2_bombs[["Target_Industry"]] %>% 
   drop_levels(drop = "UNIDENTIFIED TARGETS") %>% 
   rename_similar_levels(changes = c("AIRCRAFT"      = "A/C", 
                                     "MANUFACTURING" = "MFG.", 
-                                    "RAILROAD"      = "R.?R.? ", 
+                                    "RAILROAD "     = "R.?R.? ", 
                                     "V-WEAPON"      = "V - WEAPON", 
-                                                      ":? ([A-Z]+)")) %>% 
+                                                      ":? \\([A-Z 0-9]*\\)", 
+                                                      ",[A-Z, 0-9-]*", 
+                                                      " - [A-Z 0-9]*")) %>% 
   format_levels(tolower)
 
 WW2_bombs[["Takeoff_Country"]] %>% 
@@ -646,13 +666,255 @@ code_cols = c("Target_Country_Code",
 WW2_bombs[, (code_cols) := lapply(.SD, factor, exclude = NULL), .SDcols = code_cols]
 
 WW2_bombs %>% 
-  fill_matching_values_by_col(code_cols = code_cols, value_cols = value_cols, drop.codes = TRUE, backfill = TRUE, drop.values = TRUE, NA_code = NA_character_)
+  fill_matching_values_by_col(code_cols = code_cols, value_cols = value_cols, backfill = TRUE, drop.codes = TRUE, drop.missing.levels = TRUE, NA_code = NA_character_)
 
 WW2_bombs[, (code_cols) := lapply(.SD, as.integer), .SDcols = code_cols]
 
-# fill out missing countries by city
+# fill out missing countries by service
 WW2_bombs %>% 
-  fill_matching_values(code_col = "Target_City", value_col = "Target_Country", drop.codes = TRUE, drop.values = TRUE)
+  fill_matching_values(code_col = "Unit_Service", value_col = "Unit_Country", drop.missing.levels = TRUE)
+
+# fill out missing countries by city
+WW2_bombs %>%
+  fill_matching_values(code_col = "Target_City", value_col = "Target_Country", drop.missing.levels = TRUE)
+
+
+### the big city filtering question thing
+
+WW2_copy <- copy(WW2_bombs)
+
+# turn off indexing to prevent cache invalidation errors in WW2_bombs$Target_City's level table
+previous_auto_index_option <- getOption('datatable.auto.index')
+previous_use_index_option <- getOption('datatable.auto.index')
+options(datatable.auto.index = FALSE)
+options(datatable.use.index = FALSE)
+
+### latitude and longitude errors
+
+debug_message("finding cities with lat-long problems")
+WW2_loc <- unique(WW2_bombs[, .(Target_City, Target_Country, Target_Latitude, Target_Longitude)])
+WW2_loc_by_coord <- WW2_loc[!is.na(Target_Latitude) & 
+                              !is.na(Target_Longitude), 
+                            .(Target_City, 
+                              Target_Country, 
+                              'GRPN' = .N), 
+                            keyby = .(Target_Latitude, Target_Longitude)]
+WW2_loc_by_city <- WW2_loc[Target_City != "", 
+                           .(Target_Country, 
+                             Target_Latitude, 
+                             Target_Longitude, 
+                             'GRPN' = .N, 
+                             'loc_sd' = sqrt(sd(Target_Latitude, na.rm = TRUE) ** 2 + sd(Target_Longitude, na.rm = TRUE) ** 2) %NA% 0), 
+                           keyby = Target_City]
+WW2_cities_to_investigate <- WW2_loc_by_city[loc_sd > 0.5, as.character(unique(Target_City))]
+
+lat_long_error <- character(0L)
+city_error <- character(0L)
+unsure_error <- character(0L)
+for (city in WW2_cities_to_investigate) {
+  lats <- WW2_loc_by_city[Target_City == city & !is.na(Target_Latitude), Target_Latitude]
+  longs <- WW2_loc_by_city[Target_City == city & !is.na(Target_Longitude), Target_Longitude]
+  lat_dists <- dist(lats)
+  long_dists <- dist(longs)
+  if (any(is_int(lat_dists) & lat_dists != 0) || any(is_int(long_dists) & long_dists != 0)) {
+    # probably just a data entry/OCR mistake on the lat or long
+    lat_long_error <- append(lat_long_error, city)
+    if (any(is_int(lat_dists) & lat_dists != 0)) {
+      index <- which(is_int(lat_dists) & lat_dists != 0)
+      for (ind in index) {
+        indices <- dist_indices(ind, length(lats))
+        lats_in_question <- lats[c(indices[['i']], indices[['j']])]
+        all_lats <- WW2_bombs[Target_City == city, Target_Latitude]
+        lat_sets <- mode_and_others_num(all_lats)
+        other_lats <- lat_sets[['others']]
+        mode_lat <- lat_sets[['mode']]
+        WW2_bombs[Target_City == city & Target_Latitude %in% other_lats, Target_Latitude := mode_lat]
+      }
+    }
+    if (any(is_int(long_dists) & long_dists != 0)) {
+      index <- which(is_int(long_dists) & long_dists != 0)
+      for (ind in index) {
+        indices <- dist_indices(ind, length(longs))
+        longs_in_question <- longs[c(indices[['i']], indices[['j']])]
+        all_longs <- WW2_bombs[Target_City == city, Target_Longitude]
+        long_sets <- mode_and_others_num(all_longs)
+        other_longs <- long_sets[['others']]
+        mode_long <- long_sets[['mode']]
+        WW2_bombs[Target_City == city & Target_Longitude %in% other_longs, Target_Longitude := mode_long]
+      }
+    }
+  } else {
+    # see if any lats or longs exactly match other cities
+    lat_test <- lapply(WW2_loc_by_city$Target_Latitude, `==`, lats)
+    long_test <- lapply(WW2_loc_by_city$Target_Longitude, `==`, longs)
+    test <- lat_test %map_and% long_test
+    city_matches <- WW2_loc_by_city[Target_City != city & sapply(test, any), as.character(Target_City), nomatch = 0L]
+    if (!is_empty(city_matches)) {
+      # probably a data entry error on the city#*** still need to solve this
+      city_error <- append(city_error, city)
+    } else {
+      unsure_error <- append(unsure_error, city)#*** not sure what to do here
+    }
+  }
+}
+
+### similarly named cities
+
+city_levels <- levels(WW2_bombs$Target_City)
+city_levels_copy <- copy(city_levels)
+city_levels <- sort(fix_spaces(city_levels))
+
+partial_string_levels <- list()
+
+ignored_similar_cities <- character(0L)
+changed_similar_cities <- character(0L)
+
+for (city_index in seq_along(city_levels)[c(-1L, -length(city_levels))]) {
+  city <- city_levels[city_index]
+  if (city %c% levels(WW2_bombs$Target_City)) {
+    next_city_index <- city_index + 1L
+    next_city <- city_levels[next_city_index]
+    similar_cities <- character(0L)
+    while (next_city_index <= length(city_levels) && 
+           city %c% levels(WW2_bombs$Target_City) && 
+           adist(city, next_city, fixed = TRUE, partial = TRUE) == 0L) {
+      similar_cities <- append(similar_cities, next_city)
+      next_city_index <- next_city_index + 1L
+      next_city <- city_levels[next_city_index]
+    }
+    if (!is_empty(similar_cities)) {
+      # in case list is necessary
+      similar_cities_list <- list(similar_cities)
+      re_name(similar_cities_list, city)
+      partial_string_levels <- append(partial_string_levels, similar_cities_list)
+      # just go straight to edits
+      
+      # keep only those names that have lat-long pairs closeby
+      
+      possible_spellings <- c(city, similar_cities)
+      mean_lat <- WW2_bombs[Target_City == city, mean(Target_Latitude, na.rm = TRUE)]
+      mean_long <- WW2_bombs[Target_City == city, mean(Target_Longitude, na.rm = TRUE)]
+      relevant_data <- WW2_bombs[Target_City %in% possible_spellings & 
+                                   close_to(Target_Latitude, mean_lat, coord_buffer) & 
+                                   close_to(Target_Longitude, mean_long, coord_buffer), 
+                                 .(Target_City, Target_Country, Target_Latitude, Target_Longitude), 
+                                 nomatch = 0L]
+      if (relevant_data[Target_City != city, .N] > 0L) {
+        changed_similar_cities <- append(changed_similar_cities, city)
+        
+        # if extra words (if exists space), then do target_rules on city names and see if the results match target_names; if so, delete that word
+        
+        corrected_spellings <- toupper(possible_spellings) %>% gsubs(changes = target_rules)
+        has_target <- corrected_spellings %like% word(any_of(target_names))
+        
+        if (any(has_target)) {
+          for (item in which(has_target)) {
+            corrected_spellings[item] <- corrected_spellings[item] %>% 
+              grem(pattern = word(any_of(target_names))) %>% 
+              fix_spaces %>% 
+              proper_noun_phrase
+            WW2_bombs[["Target_City"]] %>% 
+              replace_level(from = possible_spellings[item], to = corrected_spellings[item])
+            relevant_data[["Target_City"]] %>% 
+              replace_level(from = possible_spellings[item], to = corrected_spellings[item])
+            possible_spellings[item] <- corrected_spellings[item]
+          }
+        }
+        
+        # otherwise prefer longer names
+        
+        possible_spellings <- unique(possible_spellings)
+        
+        if (length(possible_spellings) > 1L) {
+          spelling_lengths <- nchar(possible_spellings)
+          if (length(spelling_lengths %[==]% which.max(spelling_lengths)) > 1L) {
+            which_preferred <- mode_factor(relevant_data[["Target_City"]])
+          } else {
+            which_preferred <- which.max(spelling_lengths)
+          }
+          preferred_spelling <- possible_spellings[which_preferred]
+          other_spellings <- possible_spellings[-which_preferred]
+          WW2_bombs[["Target_City"]] %>% 
+            replace_levels(from = other_spellings, to = preferred_spelling)
+        }
+      } else {
+        ignored_similar_cities <- append(ignored_similar_cities, city)
+      }
+    }
+  } else {
+    ignored_similar_cities <- append(ignored_similar_cities, city)
+  }
+}
+
+
+
+debug_message("calculating string distance")
+library(stringdist)
+
+string_similarity_threshold <- 1L
+
+city_string_similarity <- stringdistmatrix(levels(WW2_bombs$Target_City), nthread = cores)
+are_cities_similar <- city_string_similarity <= string_similarity_threshold
+
+debug_message("finding similarly spelled cities")
+similar_city_list <- list()
+#city_pairs <- data.table('one' = character(sum(curious2)), 'two' = character(sum(curious2)))
+total_length <- nlevels(WW2_bombs$Target_City)
+city_names <- levels(WW2_bombs$Target_City)
+for (i in seq(total_length - 1L)) {
+  similar_cities <- character(0L)
+  for (j in seq((i + 1L), total_length)) {
+    if (are_cities_similar[dist_index(i, j, total_length)]) {
+      similar_cities <- append(similar_cities, city_names[j])
+    }
+  }
+  if (!is_empty(similar_cities)) {
+    new_list <- list()
+    new_list[[city_names[i]]] <- similar_cities
+    similar_city_list <- append(similar_city_list, new_list)
+  }
+}
+# now we have a list of cities that are similar in name to each city
+
+similar_city_names <- names(similar_city_list)
+for (city in similar_city_names[1:10]) {
+  possible_spellings <- c(city, similar_city_list[[city]])
+  mean_lat <- WW2_bombs[Target_City == city, mean(Target_Latitude, na.rm = TRUE)]
+  mean_long <- WW2_bombs[Target_City == city, mean(Target_Longitude, na.rm = TRUE)]
+  relevant_data <- WW2_bombs[Target_City %in% possible_spellings & 
+                               close_to(Target_Latitude, mean_lat, coord_buffer) & 
+                               close_to(Target_Longitude, mean_long, coord_buffer), 
+                             .(Target_City, Target_Country, Target_Latitude, Target_Longitude), 
+                             nomatch = 0L]
+  if (relevant_data[Target_City != city, .N] > 0L) {
+    changed_similar_cities <- append(changed_similar_cities, city)
+    city_sets <- mode_and_others_factor(relevant_data[["Target_City"]][, drop = TRUE])
+    mode_city <- city_sets[['mode']]
+    other_cities <- city_sets[['others']]
+    exclusive <- WW2_bombs[Target_City %in% other_cities & 
+                             !close_to(Target_Latitude, mean_lat, coord_buffer) & 
+                             !close_to(Target_Longitude, mean_long, coord_buffer), .N == 0L]
+    if (exclusive) {
+      WW2_bombs[["Target_City"]] %>% 
+        replace_levels(from = other_cities, to = mode_city)
+    } else {
+      WW2_bombs[Target_City %in% other_cities & 
+                  close_to(Target_Latitude, mean_lat, coord_buffer) & 
+                  close_to(Target_Longitude, mean_long, coord_buffer), 
+                Target_City := mode_city]
+    }
+  } else {
+    ignored_similar_cities <- append(ignored_similar_cities, city)
+  }
+}
+
+# reset data.table index for WW2_bombs$Target_City
+options(datatable.auto.index = previous_auto_index_option)
+WW2_bombs[1, Target_City := WW2_bombs[1, Target_City]]
+options(datatable.use.index = previous_use_index_option)
+
+### end of experimentation
+
 
 # long weapons types and numbers cleaning script
 source('WW2_weapon_cleaning.R')
@@ -759,10 +1021,10 @@ drop_similar_levels(Korea_bombs2[["Bomb_Damage_Assessment"]], drop = "^\\d+$")
 Korea_bombs2[Aircraft_Total_Weight %like% "\\d+ - \\d+", 
              `:=`(Aircraft_Total_Weight = "")]
 
-Korea_bombs2[Target_City %like% "ission|ccomplish|erform|btain|eturn|lew|B[CO][APR]|photo|reconnaissance|weather|due to|Non-effective", 
+Korea_bombs2[Target_City %like% "ission|ccomplish|erform|btain|eturn|lew|B[CO][APR]|photo|reconnaissance|weather|due to|effective", 
              `:=`(Bomb_Damage_Assessment = Target_City, 
                   Target_City = "")]
-drop_similar_levels(Korea_bombs2[["Target_City"]], drop = "ission|ccomplish|erform|btain|eturn|lew|B[CO][APR]|photo|reconnaissance|weather|due to|Non-effective")
+drop_similar_levels(Korea_bombs2[["Target_City"]], drop = "ission|ccomplish|erform|btain|eturn|lew|B[CO][APR]|photo|reconnaissance|weather|due to|effective")
 
 formatted_target_names <- capitalize_phrase_vectorized(target_names)
 Korea_bombs2[Target_City %contain% word(formatted_target_names) & 
@@ -771,7 +1033,7 @@ Korea_bombs2[Target_City %contain% word(formatted_target_names) &
                   Target_City = grem(Target_City, word(any_of(formatted_target_names))) %>% fix_spaces)]
 drop_similar_levels(Korea_bombs2[["Target_City"]], drop = word(any_of(formatted_target_names)))
 
-Korea_bombs2[Target_Type %exactlylike% "ccomplished|erformed|eturned", 
+Korea_bombs2[Target_Type %like% "ccomplished|erformed|eturned|Un[a-z]*own", 
              `:=`(Bomb_Damage_Assessment = Target_Type, 
                   Target_Type = "")]
 drop_similar_levels(Korea_bombs2[["Target_Type"]], drop = "ccomplished|erformed|eturned|Un[a-z]*own")
@@ -785,18 +1047,18 @@ cols <- c("Bomb_Altitude_Feet_Low",
 Korea_bombs2[, (cols) := tstrsplit(Bomb_Altitude_Feet_Range, " ?- ?", keep = 1:2)]
 Korea_bombs2[, (cols) := lapply(.SD, as.integer), .SDcols = cols]
 
-Korea_bombs2[, Weapon_Unit_Weight := grem(pattern = "\\D[ -~]*", Weapon_Type)]
+Korea_bombs2[, Weapon_Unit_Weight := grem(Weapon_Type, pattern = "\\D[ -~]*")]
 Korea_bombs2[, Weapon_Unit_Weight := as.integer(if_else(Weapon_Unit_Weight %like% "\\d+", 
                                                         Weapon_Unit_Weight, 
                                                         NA_character_))]
 Korea_bombs2[, Weapon_Weight_Pounds := Aircraft_Attacking_Num * Aircraft_Bombload_Calculated_Pounds]
 
 # general fixes, numerics
-Korea_bombs2[, Target_Latitude  := grem(pattern = "[^0-9.]*", Target_Latitude)]
+Korea_bombs2[, Target_Latitude  := grem(Target_Latitude, pattern = "[^0-9.]*")]
 Korea_bombs2[, Target_Latitude  := as.numeric(if_else(Target_Latitude == "", 
                                                       NA_character_, 
                                                       Target_Latitude))]
-Korea_bombs2[, Target_Longitude := grem(pattern = "[^0-9.]*", Target_Longitude)]
+Korea_bombs2[, Target_Longitude := grem(Target_Longitude, pattern = "[^0-9.]*")]
 Korea_bombs2[, Target_Longitude := as.numeric(if_else(Target_Longitude == "", 
                                                       NA_character_, 
                                                       Target_Longitude))]
@@ -813,14 +1075,14 @@ Korea_bombs2[Bomb_Altitude_Feet_High > Korea_altitude_max_feet &
 Korea_bombs2[Bomb_Altitude_Feet_High > Korea_altitude_max_feet, 
              `:=`(Bomb_Altitude_Feet_High = Korea_altitude_max_feet)]
 
-Korea_bombs2[, Row_Number := as.integer(grem(pattern = "\r\r", fixed = TRUE, Row_Number))] # gets forced to character somehow
+Korea_bombs2[, Row_Number := as.integer(grem(Row_Number, pattern = "\r\r", exact = TRUE))] # gets forced to character somehow
 Korea_bombs2[Weapon_Expended_Num == "" | 
                Weapon_Expended_Num == "Unknown", 
              `:=`(Weapon_Expended_Num = NA_character_)]
 Korea_bombs2[, Weapon_Expended_Num := as.integer(Weapon_Expended_Num)] # gets forced to character somehow
 Korea_bombs2[Weapon_Expended_Num == 0L, 
              `:=`(Weapon_Expended_Num = NA_integer_)]
-Korea_bombs2[, Mission_Number := as.integer(grem(pattern = "[ ?L]", Mission_Number))] # gets forced to character somehow
+Korea_bombs2[, Mission_Number := as.integer(grem(Mission_Number, pattern = "[ ?L]"))] # gets forced to character somehow
 Korea_bombs2[Aircraft_Lost_Num == "", 
              `:=`(Aircraft_Lost_Num = NA_character_)]
 Korea_bombs2[!(Aircraft_Lost_Num == "1" | Aircraft_Lost_Num == "2" | Aircraft_Lost_Num == "3"), 
@@ -828,13 +1090,10 @@ Korea_bombs2[!(Aircraft_Lost_Num == "1" | Aircraft_Lost_Num == "2" | Aircraft_Lo
                   Bomb_Damage_Assessment = Aircraft_Lost_Num)]
 Korea_bombs2[, Aircraft_Lost_Num := as.integer(Aircraft_Lost_Num)] # cleaning data type due to bad data
 
-Korea_bombs2[Target_Latitude %!between% c(-90, 90), 
+Korea_bombs2[Target_Latitude %!between% c(-90, 90) | Target_Latitude == 0, 
              `:=`(Target_Latitude = NA_real_)]
-Korea_bombs2[Target_Longitude %!between% c(-180, 180), 
-             `:=`(Target_Latitude = NA_real_)]
-Korea_bombs2[Target_Latitude == 0 & Target_Longitude == 0, 
-             `:=`(Target_Latitude = NA_real_, 
-                  Target_Longitude = NA_real_)]
+Korea_bombs2[Target_Longitude %!between% c(-180, 180) | Target_Longitude == 0, 
+             `:=`(Target_Longitude = NA_real_)]
 Korea_bombs2[Target_Latitude > 44, 
              `:=`(Target_Latitude = NA_real_, 
                   Target_Longitude = NA_real_)]
@@ -850,10 +1109,8 @@ Korea_bombs2 %>% keep(is.factor) %>% discard(is.ordered) %>%
 Korea_bombs2[["Target_City"]] %>% 
   format_levels(remove_parentheticals %,% remove_square_brackets %,% toupper) %>% 
   rename_similar_levels(changes = c("PENINSULA" = "PENNINSULA"), exact = TRUE) %>% 
-  rename_similar_levels(changes = c(and_preceding("FROM"), 
-                                    and_preceding("AT"), 
-                                    and_rest_of("TO"))) %>% 
   rename_similar_levels(changes = target_city_rules) %>% 
+  rename_similar_levels(changes = and_preceding(word(any_of(English_prepositions_for_place_names_upper)))) %>% 
   format_levels(proper_noun_phrase_vectorized)
 
 Korea_bombs2[["Weapon_Type"]] %>% 
@@ -863,7 +1120,10 @@ Korea_bombs2[["Weapon_Type"]] %>%
 Korea_bombs2[["Target_Type"]] %>% 
   format_levels(toupper) %>% 
   rename_similar_levels(changes = target_rules) %>% 
-  format_levels(tolower)
+  format_levels(tolower) %>% 
+  format_levels(fix_invalid_words, 
+                dictionary = dictionary_20k_plus, 
+                exclude = c(measurement_units, "unidentified", "unknown"))
 
 Korea_bombs2[["Unit_Squadron"]] %>% 
   rename_similar_levels(changes = c("Reconnaissance" = "Recon", 
@@ -928,17 +1188,18 @@ Vietnam_bombs[is_NA_or_0L(Weapon_Expended_Num) &
                    Weapon_Jettisoned_Num = NA_integer_, 
                    Weapon_Returned_Num = NA_integer_)]
 
-Vietnam_bombs[Target_Latitude %!between% c(-90, 90), 
+Vietnam_bombs[Target_Latitude %!between% c(-90, 90) | Target_Latitude == 0, 
               `:=`(Target_Latitude = NA_real_)]
-Vietnam_bombs[Target_Longitude %!between% c(-180, 180), 
-              `:=`(Target_Latitude = NA_real_)]
-Vietnam_bombs[Target_Latitude == 0 & Target_Longitude == 0, 
-              `:=`(Target_Latitude = NA_real_, 
-                   Target_Longitude = NA_real_)]
-Vietnam_bombs[Target_Latitude < 0.02, Target_Latitude := Target_Latitude * 1000]
-Vietnam_bombs[Target_Latitude < 1, Target_Latitude := Target_Latitude * 10 + 10]
-Vietnam_bombs[Target_Latitude < 8.5, Target_Latitude := Target_Latitude + 10]
-Vietnam_bombs[Target_Longitude %!between% c(100,110), Target_Longitude := (Target_Longitude %% 10) + 100]
+Vietnam_bombs[Target_Longitude %!between% c(-180, 180) | Target_Longitude == 0, 
+              `:=`(Target_Longitude = NA_real_)]
+Vietnam_bombs[Target_Latitude < 0.02, 
+              Target_Latitude := Target_Latitude * 1000]
+Vietnam_bombs[Target_Latitude < 1, 
+              Target_Latitude := Target_Latitude * 10 + 10]
+Vietnam_bombs[Target_Latitude < 8.5, 
+              Target_Latitude := Target_Latitude + 10]
+Vietnam_bombs[Target_Longitude %!between% c(100,110), 
+              Target_Longitude := (Target_Longitude %% 10) + 100]
 
 # new columns
 Vietnam_bombs[, Weapon_Weight_Pounds := Weapon_Expended_Num * Weapon_Unit_Weight]
@@ -974,8 +1235,11 @@ Vietnam_bombs[["Target_Type"]] %>%
                                                "/ANY", 
                                     "TROOPS" = "TROOPS? UNK.*")) %>% 
   rename_similar_levels(changes = target_rules) %>% 
-  drop_levels(drop = c("NO TARGET ACQUIRED", "UNKNOWN/UNIDENTIFIED")) %>% 
-  format_levels(tolower)
+  drop_levels(drop = c("NO TARGET ACQUIRED")) %>% 
+  format_levels(tolower) %>% 
+  format_levels(fix_invalid_words, 
+                dictionary = dictionary_20k_plus, 
+                exclude = c(measurement_units, "unidentified", "unknown"))
 
 Vietnam_bombs[["Weapon_Type"]] %>% 
   rename_similar_levels(exact = TRUE, 
@@ -1117,9 +1381,13 @@ Vietnam_bombs[, Mission_Function_Code := factor(Mission_Function_Code, exclude =
 
 # fill out matching codes and values
 Vietnam_bombs %>% 
-  fill_matching_values_(Mission_Function_Code, Mission_Function, drop.codes = TRUE, backfill = TRUE, drop.values = TRUE, NA_code = NA_character_)
+  fill_matching_values_(Mission_Function_Code, Mission_Function, backfill = TRUE, drop.codes = TRUE, drop.missing.levels = TRUE, NA_code = NA_character_)
 
 Vietnam_bombs[, Mission_Function_Code := as.integer(Mission_Function_Code)]
+
+# fill out missing countries by service
+Vietnam_bombs %>% 
+  fill_matching_values(code_col = "Unit_Service", value_col = "Unit_Country", drop.missing.levels = TRUE)
 
 # reduced columns
 Vietnam_bombs[, Target_Category := Target_Type][["Target_Category"]] %>% 

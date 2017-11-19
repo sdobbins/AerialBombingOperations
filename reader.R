@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.5
-# @date 2017-11-10 16:00
+# @version 0.9.9.6
+# @date 2017-11-19 01:00
 
 
 ### WW1 Column Names --------------------------------------------------------
@@ -54,12 +54,12 @@ WW2_col_names <- c("ID",                                     # integer
                    "Target_City_Code",                       # integer
                    "Target_Industry_Code",                   # integer
                    "Target_Industry",                        # character
-                   "Target_Latitude_Nonconverted",          # character   # drop while reading
-                   "Target_Longitude_Nonconverted",         # character   # drop while reading
+                   #"Target_Latitude_Nonconverted",          # character   # drop while reading
+                   #"Target_Longitude_Nonconverted",         # character   # drop while reading
                    "Target_Latitude",                        # double
                    "Target_Longitude",                       # double
                    "Unit_Squadron",                          # character
-                   "Aircraft_Model",                        # character   # drop while reading
+                   #"Aircraft_Model",                        # character   # drop while reading
                    "Aircraft_Type",                          # character
                    "Mission_Type",                           # integer
                    "Target_Priority_Code",                   # integer     # read as character per data.table's insistence
@@ -94,7 +94,7 @@ WW2_col_names <- c("ID",                                     # integer
                    "Sighting_Method",                        # character
                    "Bomb_Damage_Assessment",                 # character
                    "Callsign",                               # character
-                   "Ammo_Rounds",                           # integer     # drop while reading
+                   #"Ammo_Rounds",                           # integer     # drop while reading
                    "Aircraft_Spares_Num",                    # integer
                    "Aircraft_Fail_WX_Num",                   # integer
                    "Aircraft_Fail_Mech_Num",                 # integer
@@ -152,21 +152,21 @@ Korea_col_names2 <- c("Row_Number",                          # integer     # rea
                       "Aircraft_Lost_Num",                   # integer     # needs to be read as character due to bad data
                       "Target_City",                         # character
                       "Target_Type",                         # character
-                      "Target_JapanB",                      # character   # drop while reading
-                      "Target_UTM",                         # character   # drop while reading
-                      "Target_MGRS",                        # character   # drop while reading
+                      #"Target_JapanB",                      # character   # drop while reading
+                      #"Target_UTM",                         # character   # drop while reading
+                      #"Target_MGRS",                        # character   # drop while reading
                       "Target_Latitude",                     # character
                       "Target_Longitude",                    # character
-                      "Target_Latitude_Source",             # character   # drop while reading
-                      "Target_Longitude_Source",            # character   # drop while reading
+                      #"Target_Latitude_Source",             # character   # drop while reading
+                      #"Target_Longitude_Source",            # character   # drop while reading
                       "Weapon_Expended_Num",                 # integer    # read as character per data.table's insistence
                       "Weapon_Type",                         # character
                       "Bomb_Sighting_Method",                # character
-                      "Aircraft_Bombload_Pounds",           # integer     # drop while reading because it's empty
-                      "Aircraft_Total_Weight",              # character   # drop while reading because it's mostly empty and useless
+                      #"Aircraft_Bombload_Pounds",           # integer     # drop while reading because it's empty
+                      "Aircraft_Total_Weight",               # character
                       "Mission_Type",                        # character
                       "Bomb_Altitude_Feet_Range",            # character
-                      "Callsign",                           # character   # drop while reading because it's empty
+                      #"Callsign",                           # character   # drop while reading because it's empty
                       "Bomb_Damage_Assessment",              # character
                       "Nose_Fuze",                           # character
                       "Tail_Fuze",                           # character
@@ -190,27 +190,27 @@ Vietnam_col_names <- c("ID",                                 # integer
                        "Weapon_Expended_Num",                # integer
                        "Bomb_Time_Start",                    # character
                        "Weapon_Type",                        # character
-                       "Weapon_Class2",                     # character   # drop while reading
+                       #"Weapon_Class2",                     # character   # drop while reading
                        "Weapon_Unit_Weight",                 # integer
                        "Aircraft_Original",                  # character
                        "Aircraft_Root",                      # character
-                       "Unit_Group",                        # character   # drop while reading
-                       "Unit_Squadron",                     # character   # drop while reading
+                       #"Unit_Group",                        # character   # drop while reading
+                       "Unit_Squadron",                      # character
                        "Callsign",                           # character
                        "Flight_Hours",                       # integer
                        "Mission_Function_Code",              # integer     # needs to be read as character due to bad data
                        "Mission_Function",                   # character
                        "Mission_ID",                         # character
                        "Aircraft_Attacking_Num",             # integer
-                       "Operation",                       # character
+                       "Operation",                          # character
                        "Mission_Day_Period",                 # character
                        "Unit",                               # character
                        "Target_CloudCover",                  # character
                        "Target_Control",                     # character
                        "Target_Country",                     # character
                        "Target_ID",                          # character
-                       "Target_Origin_Coordinates",         # character   # drop while reading
-                       "Target_Origin_Coordinates_Format",  # character   # drop while reading
+                       #"Target_Origin_Coordinates",         # character   # drop while reading
+                       #"Target_Origin_Coordinates_Format",  # character   # drop while reading
                        "Target_Weather",                     # character
                        "Additional_Info",                    # character
                        "Target_Geozone",                     # character
@@ -219,7 +219,7 @@ Vietnam_col_names <- c("ID",                                 # integer
                        "Weapon_Jettisoned_Num",              # integer
                        "Weapon_Returned_Num",                # integer
                        "Bomb_Altitude",                      # integer
-                       "Bomb_Speed",                        # integer     # drop while reading
+                       #"Bomb_Speed",                        # integer     # drop while reading
                        "Bomb_Damage_Assessment",             # character
                        "Bomb_Time_Finish",                   # integer
                        "Weapon_Weight_Loaded")               # integer
@@ -326,12 +326,12 @@ WW2_col_classes <- list(numeric = c("WWII_ID",
                                    "TARGET_COMMENT",
                                    "MISSION_COMMENTS",
                                    "SOURCE",
-                                   "DATABASE_EDIT_COMMENTS"))#,
+                                   "DATABASE_EDIT_COMMENTS"),
 
-                        # NULL = c("SOURCE_LATITUDE",
-                        #          "SOURCE_LONGITUDE",
-                        #          "MDS",
-                        #          "ROUNDS_AMMO"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
+                        NULL = c("SOURCE_LATITUDE",
+                                 "SOURCE_LONGITUDE",
+                                 "MDS",
+                                 "ROUNDS_AMMO"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
 
 
 ### Korea 1 Column Classes --------------------------------------------------
@@ -398,15 +398,15 @@ Korea_col_classes2 <- list(numeric = c("NBR_ATTACK_EFFEC_AIRCRAFT",
                                       "MISSION_TYPE",
                                       "NOSE_FUZE",
                                       "TAIL_FUZE",
-                                      "RECORD_SOURCE"))#, 
+                                      "RECORD_SOURCE"), 
 
-                           # NULL = c("SOURCE_UTM_JAPAN_B",
-                           #          "SOURCE_TGT_UTM",
-                           #          "TGT_MGRS",
-                           #          "SOURCE_TGT_LAT",
-                           #          "SOURCE_TGT_LONG",
-                           #          "TOT",
-                           #          "CALLSIGN"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
+                           NULL = c("SOURCE_UTM_JAPAN_B",
+                                    "SOURCE_TGT_UTM",
+                                    "TGT_MGRS",
+                                    "SOURCE_TGT_LAT",
+                                    "SOURCE_TGT_LONG",
+                                    "TOT",
+                                    "CALLSIGN"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
 
 
 ### Vietnam Column Classes --------------------------------------------------
@@ -438,6 +438,7 @@ Vietnam_col_classes <- list(numeric = c("THOR_DATA_VIET_ID",
                                        "WEAPONTYPE",
                                        "AIRCRAFT_ORIGINAL",
                                        "AIRCRAFT_ROOT",
+                                       "AIRFORCESQDN",
                                        "CALLSIGN",
                                        "MISSIONID",
                                        "MFUNC_DESC",
@@ -454,14 +455,13 @@ Vietnam_col_classes <- list(numeric = c("THOR_DATA_VIET_ID",
                                        "MFUNC",
                                        "MFUNC_DESC_CLASS",
                                        "RESULTSBDA", 
-                                       "TIMEOFFTARGET"))#, 
+                                       "TIMEOFFTARGET"), 
 
-                            # NULL = c("AIRFORCEGROUP",
-                            #          "AIRFORCESQDN",
-                            #          "WEAPONTYPECLASS",
-                            #          "TGTORIGCOORDS",
-                            #          "TGTORIGCOORDSFORMAT",
-                            #          "RELEASEFLTSPEED"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
+                            NULL = c("AIRFORCEGROUP",
+                                     "WEAPONTYPECLASS",
+                                     "TGTORIGCOORDS",
+                                     "TGTORIGCOORDSFORMAT",
+                                     "RELEASEFLTSPEED"))#*** doesn't work (successfully drop columns by not reading them) in current data.table 1.10.5 dev version
 
 
 ### Read Data ---------------------------------------------------------------

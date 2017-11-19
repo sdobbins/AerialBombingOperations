@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.5
-# @date 2017-11-10 16:00
+# @version 0.9.9.6
+# @date 2017-11-19 01:00
 
 
 ### Context -----------------------------------------------------------------
@@ -17,7 +17,7 @@ test_that("no data column is completely empty or identical across all rows", {
   WW2_bombs %>% map_int(~expect_gt(cardinality(.), 1L))
   Korea_bombs1 %>% select(-Takeoff_Latitude, -Takeoff_Longitude, -Target_Country, -Target_Category) %>% map_int(~expect_gt(cardinality(.), 1L))
   Korea_bombs2 %>% select(-Unit_Country, -Target_Country, -Reference_Source) %>% map_int(~expect_gt(cardinality(.), 1L))
-  Vietnam_bombs %>% select(-Weapon_Class2) %>% map_int(~expect_gt(cardinality(.), 1L))
+  Vietnam_bombs %>% map_int(~expect_gt(cardinality(.), 1L))
 })
 
 

@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.5
-# @date 2017-11-10 16:00
+# @version 0.9.9.6
+# @date 2017-11-19 01:00
 
 
 ### Import Packages ---------------------------------------------------------
@@ -30,7 +30,7 @@ library(DT)             # web tables
 ### Custom Utilities --------------------------------------------------------
 
 # standard personal functions
-source('utils.R')
+source('standard_utils.R')
 
 
 ### Global Values -----------------------------------------------------------
@@ -154,15 +154,15 @@ walk(list(WW1_clean, WW2_clean, Korea_clean1, Korea_clean2, Vietnam_clean),
      ~setkeyv(., cols = keys))
 
 
-### Create Samples ----------------------------------------------------------
-
-if (debug_mode_on) {
-  WW1_sample <-     sample_n(WW1_clean,     debug_sample_size)
-  WW2_sample <-     sample_n(WW2_clean,     debug_sample_size)
-  Korea_sample1 <-  sample_n(Korea_clean1,  debug_sample_size)
-  Korea_sample2 <-  sample_n(Korea_clean2,  debug_sample_size)
-  Vietnam_sample <- sample_n(Vietnam_clean, debug_sample_size)
-}
+# ### Create Samples ----------------------------------------------------------
+# 
+# if (debug_mode_on) {
+#   WW1_sample <-     sample_n(WW1_clean,     debug_sample_size)
+#   WW2_sample <-     sample_n(WW2_clean,     debug_sample_size)
+#   Korea_sample1 <-  sample_n(Korea_clean1,  debug_sample_size)
+#   Korea_sample2 <-  sample_n(Korea_clean2,  debug_sample_size)
+#   Vietnam_sample <- sample_n(Vietnam_clean, debug_sample_size)
+# }
 
 
 ### More Globals ------------------------------------------------------------

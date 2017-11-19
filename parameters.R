@@ -1,23 +1,27 @@
 # @author Scott Dobbins
-# @version 0.9.9.5
-# @date 2017-11-10 16:00
+# @version 0.9.9.6
+# @date 2017-11-19 01:00
 
 
 ### Developer Control -------------------------------------------------------
 
 # debug control
-debug_mode_on <- FALSE
+debug_mode_on <- TRUE
 debug_sample_size <- 1024
 
 # data refresh
-refresh_data <- FALSE
+refresh_data <- TRUE
 full_write <- FALSE
 
 # JIT compiler settings
 use_compiler <- TRUE
 
 # parallel settings
-use_parallel <- FALSE
+use_parallel <- TRUE
+
+
+### cleaning data
+coord_buffer <- 0.1
 
 
 ### writing data
