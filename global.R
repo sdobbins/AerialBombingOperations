@@ -25,12 +25,13 @@ library(data.table)     # data processing
 # library(htmltools)      # helps with tooltips
 library(DT)             # web tables
 # library(rgdal)          # map reading
+library(stringdist)     # string matching
 
 
 ### Custom Utilities --------------------------------------------------------
 
 # standard personal functions
-source('standard_utils.R')
+source('~/Developer/RStudio/utils/utils_standard.R')
 
 
 ### Global Values -----------------------------------------------------------

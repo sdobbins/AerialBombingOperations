@@ -184,6 +184,7 @@ target_rules <- c(                            "/?ETC",
                   "FACILITY"                = "\\b(FACILIT[A-Z]*)\\b", 
                   "FACTORY"                 = "\\b(FAC?T?|FCTY|FACTO|FACTOR[A-Z]+)\\b", 
                   "FERRY"                   = "\\b(FERRIES)\\b", 
+                  "FLIGHT"                  = "\\b(FLT)\\b", 
                   "FURNACE"                 = "\\b(FRNCS?|FURNACES)\\b", 
                   "GASOLINE"                = "\\b(GAS)\\b", 
                   "GOVERNMENT"              = "\\b(GOVT|GOVERMENT)\\b", 
@@ -204,7 +205,7 @@ target_rules <- c(                            "/?ETC",
                   "INTERSECTION"            = "\\b(INTERSEC[A-Z]*)\\b", 
                   "JAPANESE"                = "\\b(JAPS?|JAPANSE)\\b", 
                   "JETTY"                   = "\\b(JETTIES)\\b", 
-                  "JUNCTION"                = "\\b(JTNS?|JCTS?|JUNC|JUNCT[A-Z]*|JCTIONS?)\\b", 
+                  "JUNCTION"                = "\\b(JTNS?|JCTS?|JUNC|JUNCT[A-Z]*|JNCTNS?|JCTIONS?)\\b", 
                   "LAUNCHER"                = "\\b(LNCHR)\\b", 
                   "LIGHT"                   = "\\b(LGT)\\b", 
                   "LOCATION"                = "\\b(LOCS?)\\b", 
@@ -244,6 +245,7 @@ target_rules <- c(                            "/?ETC",
                   "RAILWAY"                 = "\\b(RLWY|RAILWAYS)\\b", 
                   "RAILYARD"                = "\\b(RAILYARDS)\\b", 
                   "RATIONS"                 = "\\b(RATION)\\b", 
+                  "RECONNAISSANCE"          = "\\b(RECON)\\b", 
                   "REFINERY"                = "\\b(REF|R[EI]FINER[A-Z]*)\\b", 
                   "REINFORCEMENTS"          = "\\b(REINFORC[A-Z]*)\\b", 
                   "REPORTED"                = "\\b(RPTD)\\b", 
@@ -424,11 +426,12 @@ Vietnam_operation_rules2 <- c(        " ?- ?.*",
 
 ### Dictionary Supplementation ----------------------------------------------
 
-target_names <- names(target_rules) %whichlike% "^[A-Z]"
-target_names <- sort(unique(c(make_singular(tolower(target_names)), make_plural(tolower(target_names)))))
+other_target_names <- c("BOMBED", "DIVE", "DIVE BOMBED", "MISSION", "SHORE", "TORPEDO", "WRECK")
+target_names <- c(names(target_rules) %whichlike% "^[A-Z]", other_target_names)
+target_names <- toupper(sort(unique(c(make_singular(tolower(target_names)), make_plural(tolower(target_names))))))
 
 specific_terms <- tolower(target_names)
-other_specific_terms <- read.csv('words/other specific terms.txt', header = FALSE, stringsAsFactors = FALSE)[["V1"]]
+other_specific_terms <- read.csv('data/other specific terms.txt', header = FALSE, stringsAsFactors = FALSE)[["V1"]]
 other_specific_terms <- c(other_specific_terms, paste0(other_specific_terms, "s"))
 
 #dictionary_10k_plus <- c(dictionary_10k, specific_terms, other_specific_terms)
@@ -437,7 +440,7 @@ dictionary_20k_plus <- c(dictionary_20k, specific_terms, other_specific_terms)
 
 ### Capitalization Supplementation ------------------------------------------
 
-proper_noun_aircraft <- function(word) {
+proper_aircraft_noun <- function(word) {
   if (word %in% aircraft_letters) {
     return (word)
   } else {
@@ -445,21 +448,21 @@ proper_noun_aircraft <- function(word) {
   }
 }
 
-proper_noun_aircraft_vectorized <- function(words) {
+proper_aircraft_nouns <- function(words) {
   return (if_else(words %in% aircraft_letters | 
                     (regexpr(pattern = "-|\\d", words) > 0L & regexpr(pattern = "[A-Za-z]{6,}", words) == -1L), 
                   words, 
-                  capitalize_phrase_vectorized(words)))
+                  capitalize_phrases(words)))
 }
 
 proper_noun_phrase_aircraft <- function(line) {
-  return (paste(proper_noun_aircraft_vectorized(strsplit(line, split = " ", fixed = TRUE)[[1]]), collapse = " "))
+  return (paste(proper_aircraft_nouns(strsplit(line, split = " ", fixed = TRUE)[[1]]), collapse = " "))
 }
 
-proper_noun_phrase_aircraft_vectorized <- function(lines) {
+proper_aircraft_noun_phrases <- function(lines) {
   lines_mod <- if_else(lines == "", "`", lines)
   lines_mod <- strsplit(lines_mod, split = " ", fixed = TRUE)
-  lines_mod <- split(proper_noun_aircraft_vectorized(unlist(lines_mod, use.names = FALSE)), rep(1:length(lines), lengths(lines_mod)))
+  lines_mod <- split(proper_aircraft_nouns(unlist(lines_mod, use.names = FALSE)), rep(1:length(lines), lengths(lines_mod)))
   lines_reduced <- map_chr(lines_mod, paste0, collapse = " ")
   return (if_else(lines == "", "", lines_reduced))
 }
@@ -474,30 +477,30 @@ weapon <- function(word) {
   }
 }
 
-weapon_vectorized <- function(words) {
+weapons <- function(words) {
   return (if_else(grepl("[0-9-]", words) | words %in% weapon_set_upper, 
                   words, 
                   if_else(words %in% measurement_units_upper, 
                           tolower(words), 
-                          capitalize_phrase_vectorized(words))))
+                          capitalize_phrases(words))))
 }
 
-weapon_vectorized2 <- function(words) {
+weapons2 <- function(words) {
   not_weapon <- !(grepl("[0-9-]", words) | words %in% weapon_set_upper)
   is_measuring_unit <- words %in% measurement_units_upper
   words[not_weapon & is_measuring_unit] <- tolower(words[not_weapon & is_measuring_unit])
-  words[not_weapon & !is_measuring_unit] <- capitalize_phrase_vectorized(words[not_weapon & !is_measuring_unit])
+  words[not_weapon & !is_measuring_unit] <- capitalize_phrases(words[not_weapon & !is_measuring_unit])
   return (words)
 }
 
 weapon_phrase <- function(line) {
-  return (paste(weapon_vectorized(strsplit(line, split = " ", fixed = TRUE)[[1]]), collapse = " "))
+  return (paste(weapons(strsplit(line, split = " ", fixed = TRUE)[[1]]), collapse = " "))
 }
 
-weapon_phrase_vectorized <- function(lines) {
+weapon_phrases <- function(lines) {
   lines_mod <- if_else(lines == "", "`", lines)
   lines_mod <- strsplit(lines_mod, split = " ", fixed = TRUE)
-  lines_mod <- split(weapon_vectorized(unlist(lines_mod, use.names = FALSE)), rep(1:length(lines), lengths(lines_mod)))
+  lines_mod <- split(weapons(unlist(lines_mod, use.names = FALSE)), rep(1:length(lines), lengths(lines_mod)))
   lines_mod <- map_chr(lines_mod, paste0, collapse = " ")
   return (if_else(lines == "", "", lines_mod))
 }
@@ -532,18 +535,18 @@ bomb_string <- function(weight, bomb, empty = "") {
     }
   } else {
     if (bomb == empty) {
-      return (paste0(add_commas(weight), " pounds of bombs on"))
+      return (paste0(commas_number(weight), " pounds of bombs on"))
     } else {
-      return (paste0(add_commas(weight), " pounds of ", bomb, " on"))
+      return (paste0(commas_number(weight), " pounds of ", bomb, " on"))
     }
   }
 }
 
-bomb_string_vectorized <- function(weights, bombs, empty = "") {
+bomb_strings <- function(weights, bombs, empty = "") {
   results <- rep("", length(weights))
   NA_weights <- is.na(weights)
   results[NA_weights] <- "some "
-  results[!NA_weights] <- paste0(add_commas_vectorized(weights[!NA_weights]), " pounds of ")
+  results[!NA_weights] <- paste0(commas_numbers(weights[!NA_weights]), " pounds of ")
   empty_bombs <- bombs == empty
   results[empty_bombs] <- paste0(results[empty_bombs], "bombs on")
   results[!empty_bombs] <- paste0(results[!empty_bombs], bombs[!empty_bombs], " on")
@@ -572,7 +575,7 @@ aircraft_numtype_string <- function(num, type, empty = "") {
   }
 }
 
-aircraft_numtype_string_vectorized <- function(nums, types, empty = "") {
+aircraft_numtype_strings <- function(nums, types, empty = "") {
   results <- rep("", length(nums))
   
   NA_nums <- is.na(nums)
@@ -601,7 +604,7 @@ aircraft_string <- function(numtype, division, empty = "") {
   }
 }
 
-aircraft_string_vectorized <- function(numtypes, divisions, empty = "") {
+aircraft_strings <- function(numtypes, divisions, empty = "") {
   return (if_else(divisions == empty, 
                   paste0(numtypes, " dropped"), 
                   paste0(numtypes, " of the ", divisions, " dropped")))
@@ -615,15 +618,15 @@ target_type_string <- function(type, empty = "") {
   }
 }
 
-target_type_string_vectorized <- function(types, empty = "") {
+target_type_strings <- function(types, empty = "") {
   if (is.factor(types)) {
     return (if_else(types == empty, 
                     "a target", 
-                    fix_articles_vectorized(as.character(types), military_invariate_plurals)))
+                    articles_fixes(as.character(types), military_invariate_plurals)))
   } else {
     return (if_else(types == empty, 
                     "a target", 
-                    fix_articles_vectorized(types, military_invariate_plurals)))
+                    articles_fixes(types, military_invariate_plurals)))
   }
 }
 
@@ -635,7 +638,7 @@ target_area_string <- function(area, empty = "") {
   }
 }
 
-target_area_string_vectorized <- function(areas, empty = "") {
+target_area_strings <- function(areas, empty = "") {
   results <- rep("in ", length(areas))
   empty_areas <- areas == empty
   results[empty_areas] <- paste0(results[empty_areas], "this area")
@@ -659,7 +662,7 @@ target_location_string <- function(city, country, empty = "") {
   }
 }
 
-target_location_string_vectorized <- function(cities, countries, empty = "") {
+target_location_strings <- function(cities, countries, empty = "") {
   results <- rep("in ", length(cities))
   
   empty_cities <- cities == empty

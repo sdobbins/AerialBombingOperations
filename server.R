@@ -145,28 +145,28 @@ shinyServer(function(input, output, session) {
   # number of missions
   output$num_missions <- renderInfoBox({
     infoBox(title = "Missions", 
-            value = add_commas(get_total_missions()), 
+            value = commas_number(get_total_missions()), 
             icon = icon('chevron-up', lib = 'font-awesome'))
   })
   
   # number of aircraft
   output$num_aircraft <- renderInfoBox({
     infoBox(title = "Flights", 
-            value = add_commas(get_total_flights()), 
+            value = commas_number(get_total_flights()), 
             icon = icon('fighter-jet', lib = 'font-awesome'))
   })
   
   # number of bombs
   output$num_bombs <- renderInfoBox({
     infoBox(title = "Bombs", 
-            value = add_commas(get_total_bombs()), 
+            value = commas_number(get_total_bombs()), 
             icon = icon('bomb', lib = 'font-awesome'))
   })
   
   # weight of bombs
   output$total_weight <- renderInfoBox({
     infoBox(title = "TNT Equivalent (lbs)", 
-            value = add_commas(get_total_weight()), 
+            value = commas_number(get_total_weight()), 
             icon = icon('fire', lib = 'font-awesome'))
   })
   

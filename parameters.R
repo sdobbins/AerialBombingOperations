@@ -22,7 +22,9 @@ use_parallel <- TRUE
 
 ### cleaning data
 coord_buffer <- 0.1
-
+coord_buffer_tight <- 0.001
+lat_long_error_threshold_tight <- round(sqrt(2) / 20 - 0.00005, digits = 4L)
+lat_long_error_threshold <- 0.5
 
 ### writing data
 downsample <- TRUE

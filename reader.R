@@ -480,6 +480,9 @@ WW2_bombs <- fread(file = WW2_missions_filepath,
                    blank.lines.skip = TRUE, 
                    fill = TRUE)
 
+WW2_country_locs <- fread(file = 'data/countries/countries.csv', 
+                      stringsAsFactors = FALSE)
+
 debug_message("reading Korea1")
 Korea_bombs1 <- fread(file = Korea_missions1_filepath, 
                       col.names  = Korea_col_names1, 
