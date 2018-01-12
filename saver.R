@@ -19,13 +19,6 @@ for (war_data_tag in war_data_tags) {
          quote = TRUE)
 }
 
-debug_message("saving unique targets data")
-for (war_data_tag in war_data_tags) {
-  fwrite(unique_data[[war_data_tag]], 
-         file = war_unique_filepath[[war_data_tag]], 
-         quote = TRUE)
-}
-
 debug_message("saving workspace")
 save.image(file = paste0(save_path, Sys.Date(), save_extension))
 

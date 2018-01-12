@@ -1,9 +1,9 @@
 # @author Scott Dobbins
-# @version 0.9.9.6
-# @date 2017-11-19 01:00
+# @version 0.9.9.7
+# @date 2018-01-12 00:30
 
 
-WW2_basic_fixes <- copy(WW2_bombs)#***
+#WW2_basic_fixes <- copy(WW2_bombs)#***
 ### the big city filtering question thing
 debug_message("verifying data by row")
 # turn off indexing to prevent cache invalidation errors in WW2_bombs$Target_City's level table
@@ -11,7 +11,6 @@ previous_auto_index_option <- getOption('datatable.auto.index')
 previous_use_index_option <- getOption('datatable.auto.index')
 options(datatable.auto.index = FALSE)
 options(datatable.use.index = FALSE)
-
 
 
 ### discover and fix partially-named cities
@@ -91,15 +90,15 @@ for (city_index in seq_along(city_levels)[c(-1L, -city_levels_length)]) {
     }
   }
 }
-WW2_similar_name_fixes <- copy(WW2_bombs)#***good through here
-
+#WW2_similar_name_fixes <- copy(WW2_bombs)#***good through here
 
 
 ### find and fix latitude and longitude errors
 debug_message("fixing lat-long problems")
 
 WW2_loc <- unique(WW2_bombs[, .(Target_City, Target_Country, Target_Latitude, Target_Longitude)])
-WW2_loc_by_coord <- WW2_loc[!is.na(Target_Latitude) & 
+WW2_loc_by_coord <- WW2_loc[Target_City %!in% c("", known_duplicate_city_names) & 
+                              !is.na(Target_Latitude) & 
                               !is.na(Target_Longitude), 
                             .(Target_City, 
                               Target_Country, 
@@ -148,7 +147,8 @@ for (loc_index in seq_len(nrow(WW2_unique_locs_to_investigate))) {
 }
 WW2_bombs %>% 
   drop_missing_levels_by_col(cols = c("Target_City", "Target_Country"))
-WW2_city_country_fixes <- copy(WW2_bombs)#***probably good through here
+#WW2_city_country_fixes <- copy(WW2_bombs)#***probably good through here
+
 
 WW2_loc <- unique(WW2_bombs[, .(Target_City, Target_Country, Target_Latitude, Target_Longitude)])
 WW2_loc_by_city <- WW2_loc[Target_City %!in% c("", known_duplicate_city_names) & 
@@ -162,8 +162,6 @@ WW2_loc_by_city <- WW2_loc[Target_City %!in% c("", known_duplicate_city_names) &
                              'long_sd' = sd(Target_Longitude) %NA% 0), 
                            keyby = Target_City]
 #WW2_loc_by_city[, loc_sd := sqrt(lat_sd ** 2 + long_sd ** 2), by = Target_City]
-
-
 
 # first lat errors (for lat corrections)
 lat_error <- character(0L)
@@ -210,13 +208,12 @@ for (city in cities_to_investigate) {
     }
   }
 }
-WW2_lat_long_fixes <- copy(WW2_bombs) #***
-
+#WW2_lat_long_fixes <- copy(WW2_bombs) #***
 
 
 # then loc errors (for city corrections)
 WW2_loc <- unique(WW2_bombs[, .(Target_City, Target_Country, Target_Latitude, Target_Longitude)])
-WW2_loc_by_city <- WW2_loc[Target_City != "" & 
+WW2_loc_by_city <- WW2_loc[Target_City %!in% c("", known_duplicate_city_names) & 
                              !is.na(Target_Latitude) & 
                              !is.na(Target_Longitude), 
                            .(Target_Country, 
@@ -297,7 +294,7 @@ for (city in cities_to_investigate) {
     unsure_error <- append(unsure_error, city)#*** not sure what to do here--these are just vaguely defined cities
   }
 }
-WW2_city_loc_fixes <- copy(WW2_bombs) #****
+#WW2_city_loc_fixes <- copy(WW2_bombs) #****
 
 
 ### fix countries for cities with small variance in lat-longs
@@ -313,13 +310,12 @@ sub_selection <- WW2_loc[Target_City %in% cities_to_investigate, ]
 cities_to_investigate <- sub_selection[, .('sd' = sqrt((sd(Target_Latitude) %NA% 0) ** 2 + (sd(Target_Longitude) %NA% 0)) ** 2), 
                                        by = Target_City][sd < lat_long_error_threshold, 
                                                          as.character(Target_City)]
-print(cities_to_investigate)
+#print(cities_to_investigate)
 for (city in cities_to_investigate) {
   best_country <- mode_factor(WW2_bombs[Target_City == city, Target_Country][, drop = TRUE])
   WW2_bombs[Target_City == city, Target_Country := best_country]
 }
-WW2_country_loc_fixes <- copy(WW2_bombs) #****
-
+#WW2_country_loc_fixes <- copy(WW2_bombs) #****
 
 
 # fix mistaken countries
@@ -412,9 +408,7 @@ for (i in seq_len(nrow(WW2_loc_by_coord))) {
 }
 WW2_bombs[["Target_Country"]] %>% 
   drop_levels(drop = country_levels %d% recorded_countries)
-WW2_mistaken_countries_fix <- copy(WW2_bombs) #***
-
-
+#WW2_mistaken_countries_fix <- copy(WW2_bombs) #***
 
 
 ### fill in missing countries
@@ -490,9 +484,7 @@ for (i in seq_len(nrow(WW2_blank_countries_by_coord))) {
               near(Target_Longitude, long, lat_long_error_threshold_tight), 
             Target_Country := best_country]
 }
-WW2_empty_country_fix <- copy(WW2_bombs) #***
-
-
+#WW2_empty_country_fix <- copy(WW2_bombs) #***
 
 
 ### fix cities
@@ -555,9 +547,7 @@ for (country in countries) {#*** perhaps rewrite to look for nearby cities first
     }
   }
 }
-WW2_city_names_fix <- copy(WW2_bombs) #***
-
-
+#WW2_city_names_fix <- copy(WW2_bombs) #***
 
 
 # correct mistaken cities #*** wait--this is redundant with fixing cities (and, unrelatedly, countries) by loc earlier, right?
@@ -568,8 +558,6 @@ WW2_city_names_fix <- copy(WW2_bombs) #***
 #   cities <- country_data[, as.character(unique(Target_City))] %[!=]% ""
 #   
 # }
-
-
 
 
 # fill in missing cities (if possible)
@@ -611,10 +599,10 @@ for (i in seq_len(nrow(WW2_blank_cities_by_coord))) {
                                 near(Target_Latitude, lat, coord_buffer) & 
                                 near(Target_Longitude, long, coord_buffer), 
                               as.character(unique(Target_Country))]
-    if (is_nonscalar(best_country)) {
-      print(best_city)
-      print(best_country)
-    }
+    # if (is_nonscalar(best_country)) {
+    #   print(best_city)
+    #   print(best_country)
+    # }
     blank_cities <- append(blank_cities, list(c(i, best_city)))
     WW2_bombs[Target_City == "" & 
                 near(Target_Latitude, lat, lat_long_error_threshold_tight) & 
@@ -626,7 +614,8 @@ for (i in seq_len(nrow(WW2_blank_cities_by_coord))) {
 
 
 ### fill in missing lats and longs with mean
-WW2_loc <- unique(WW2_bombs[Target_City != "", .(Target_City, Target_Country, Target_Latitude, Target_Longitude)])
+WW2_loc <- unique(WW2_bombs[Target_City %!in% c("", known_duplicate_city_names), 
+                            .(Target_City, Target_Country, Target_Latitude, Target_Longitude)])
 blank_loc_cities <- WW2_loc[is.na(Target_Longitude) | is.na(Target_Latitude), 
                             as.character(Target_City)]
 non_blank_loc_cities <- WW2_loc[!is.na(Target_Longitude) & !is.na(Target_Latitude), 

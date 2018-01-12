@@ -86,7 +86,7 @@ date_picker <- function() {
 
 region_picker <- function() {
   selectizeInput(inputId = "regions", 
-                 label = "Targets in which region?", 
+                 label = "Targets in which territory?", 
                  choices = c("All"), 
                  select = "All", 
                  multiple = TRUE, 

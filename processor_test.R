@@ -63,7 +63,7 @@ test_that("no missing levels exist", {
     map_lgl(~expect_false(any(tabulate_factor(.) == 0L)))
   Korea_clean1 %>% keep(is.factor) %>% 
     map_lgl(~expect_false(any(tabulate_factor(.) == 0L)))
-  Korea_clean2 %>% keep(is.factor) %>% 
+  Korea_clean2 %>% keep(is.factor) %>% select(-Target_Category) %>% 
     map_lgl(~expect_false(any(tabulate_factor(.) == 0L)))
   Vietnam_clean %>% keep(is.factor) %>% select(-Year) %>% 
     map_lgl(~expect_false(any(tabulate_factor(.) == 0L)))

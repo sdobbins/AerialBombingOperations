@@ -207,7 +207,7 @@ WW1_clean[, `:=`(tooltip_datetime = date_period_time_string(date_string(Month_na
                  tooltip_target   = target_location_strings(Target_City, Target_Country, empty_text))]
 
 WW2_clean[, `:=`(tooltip_datetime = date_time_string(date_string(Month_name, Day, Year), Bomb_Time, empty_text), 
-                 tooltip_target   = target_location_strings(Target_City, Target_Country, empty_text))]
+                 tooltip_target   = target_location_strings(Target_City, Target_Region, empty_text))]
 
 Korea_clean2[, `:=`(tooltip_datetime = date_string(Month_name, Day, Year), 
                     tooltip_target   = target_location_strings(Target_City, Target_Country, empty_text))]

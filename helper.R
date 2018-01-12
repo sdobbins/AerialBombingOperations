@@ -3,6 +3,16 @@
 # @date 2017-11-19 01:00
 
 
+### Imports -----------------------------------------------------------------
+
+# import pluralizer
+if (!for_publication) {
+  source('~/Developer/Github/acid/acid.R')
+} else {
+  source('acid/acid.R')
+}
+
+
 ### Local Values ------------------------------------------------------------
 
 WW1_countries <- c("UK", "USA")
@@ -58,26 +68,26 @@ months <- c("January" = 1L,
 
 ### categorizations
 
-visibility_categorizations <- c("good" = any_of(c("good", "clear", "excellent", "undercast")), 
-                                "poor" = any_of(c("poor", "clouds", "overcast")), 
-                                "fair" = any_of(c("fair", "layers", "scattered")), 
-                                "poor" = any_of(c("very")))
+visibility_categorizations <- c("good" = ending_with(any_of(c("good", "clear", "excellent", "undercast"))), 
+                                "poor" = ending_with(any_of(c("poor", "clouds", "overcast"))), 
+                                "fair" = ending_with(any_of(c("fair", "layers", "scattered"))), 
+                                "poor" = ending_with(any_of(c("very"))))
 
-target_categorizations <- c("town"           = any_of(c("town", "business", "city", "house", "huts", "market", "monastery", "town", "urban", "village")), 
-                            "factory"        = any_of(c("factory", "assembly", "blast", "construction", "engine", "furnace", "gasoline", "hydroelectric", "manufacturing", "plant", "power", "refinery", "works")), 
-                            "airfield"       = any_of(c("airfield", "airdrome", "runway")), 
-                            "aircraft"       = any_of(c("aircraft", "airframes", "mig", "seaplanes")), 
-                            "headquarters"   = any_of(c("communications", "compound", "facility", "government", "headquarters", "management")), 
-                            "defenses"       = any_of(c("defenses", "anti-aircraft", "battery", "defensive", "emplacement", "gun", "installation", "pillbox", "tower")), 
-                            "base"           = any_of(c("base", "aresenal", "barracks", "buildings", "camp")), 
-                            "harbor"         = any_of(c("harbor", "barges", "boats", "coastal", "dock", "ferry", "jetty", "shipyard", "vessels", "waterfront", "wharf")), 
-                            "munitions"      = any_of(c("munitions", "ammunition", "explosives", "ordinances")), 
-                            "infrastructure" = any_of(c("bridge", "canal", "river crossing", "tunnel")), 
-                            "rail"           = any_of(c("rail", "junction", "marshalling", "railroad", "railway", "station", "trains", "yard")), 
-                            "road"           = any_of(c("road", "highway", "locomotives", "transportation", "trucks", "vehicles")), 
-                            "supplies"       = any_of(c("supplies", "depot", "dump", "equipment", "rations", "shipping", "storage", "warehouse")), 
-                            "troops"         = any_of(c("troops", "artillery", "concentration", "enemy", "japanese", "moving target", "personnel", "support")), 
-                            "area"           = any_of(c("area", "hill", "location", "place", "point", "position", "tactical", "target")))
+target_categorizations <- c("town"           = ending_with(any_of(c("town", "business", "city", "house", "huts", "market", "monastery", "town", "urban", "village"))), 
+                            "factory"        = ending_with(any_of(c("factory", "assembly", "blast", "construction", "engine", "furnace", "gasoline", "hydroelectric", "manufacturing", "plant", "power", "refinery", "works"))), 
+                            "airfield"       = ending_with(any_of(c("airfield", "airdrome", "runway"))), 
+                            "aircraft"       = ending_with(any_of(c("aircraft", "airframes", "mig", "seaplanes"))), 
+                            "headquarters"   = ending_with(any_of(c("communications", "compound", "facility", "government", "headquarters", "management"))), 
+                            "defenses"       = ending_with(any_of(c("defenses", "anti-aircraft", "battery", "defensive", "emplacement", "gun", "installation", "pillbox", "tower"))), 
+                            "base"           = ending_with(any_of(c("base", "aresenal", "barracks", "buildings", "camp"))), 
+                            "harbor"         = ending_with(any_of(c("harbor", "barges", "boats", "coastal", "dock", "ferry", "jetty", "shipyard", "vessels", "waterfront", "wharf"))), 
+                            "munitions"      = ending_with(any_of(c("munitions", "ammunition", "explosives", "ordinances"))), 
+                            "infrastructure" = ending_with(any_of(c("bridge", "canal", "river crossing", "tunnel"))), 
+                            "rail"           = ending_with(any_of(c("rail", "junction", "marshalling", "railroad", "railway", "station", "trains", "yard"))), 
+                            "road"           = ending_with(any_of(c("road", "highway", "locomotives", "transportation", "trucks", "vehicles"))), 
+                            "supplies"       = ending_with(any_of(c("supplies", "depot", "dump", "equipment", "rations", "shipping", "storage", "warehouse"))), 
+                            "troops"         = ending_with(any_of(c("troops", "artillery", "concentration", "enemy", "japanese", "moving target", "personnel", "support"))), 
+                            "area"           = ending_with(any_of(c("area", "hill", "location", "place", "point", "position", "tactical", "target"))))
 
 
 ### rules
@@ -428,11 +438,11 @@ Vietnam_operation_rules2 <- c(        " ?- ?.*",
 
 other_target_names <- c("BOMBED", "DIVE", "DIVE BOMBED", "MISSION", "SHORE", "TORPEDO", "WRECK")
 target_names <- c(names(target_rules) %whichlike% "^[A-Z]", other_target_names)
-target_names <- toupper(sort(unique(c(make_singular(tolower(target_names)), make_plural(tolower(target_names))))))
+target_names <- toupper(sort(get_singular_and_plural(tolower(target_names))))
 
 specific_terms <- tolower(target_names)
-other_specific_terms <- read.csv('data/other specific terms.txt', header = FALSE, stringsAsFactors = FALSE)[["V1"]]
-other_specific_terms <- c(other_specific_terms, paste0(other_specific_terms, "s"))
+other_specific_terms <- read_list_of_words('data/other specific terms.txt')
+other_specific_terms <- get_singular_and_plural(other_specific_terms, data_in = 'singular')
 
 #dictionary_10k_plus <- c(dictionary_10k, specific_terms, other_specific_terms)
 dictionary_20k_plus <- c(dictionary_20k, specific_terms, other_specific_terms)
@@ -535,9 +545,9 @@ bomb_string <- function(weight, bomb, empty = "") {
     }
   } else {
     if (bomb == empty) {
-      return (paste0(commas_number(weight), " pounds of bombs on"))
+      return (paste0(commas_string(weight), " pounds of bombs on"))
     } else {
-      return (paste0(commas_number(weight), " pounds of ", bomb, " on"))
+      return (paste0(commas_string(weight), " pounds of ", bomb, " on"))
     }
   }
 }
@@ -546,7 +556,7 @@ bomb_strings <- function(weights, bombs, empty = "") {
   results <- rep("", length(weights))
   NA_weights <- is.na(weights)
   results[NA_weights] <- "some "
-  results[!NA_weights] <- paste0(commas_numbers(weights[!NA_weights]), " pounds of ")
+  results[!NA_weights] <- paste0(commas_strings(weights[!NA_weights]), " pounds of ")
   empty_bombs <- bombs == empty
   results[empty_bombs] <- paste0(results[empty_bombs], "bombs on")
   results[!empty_bombs] <- paste0(results[!empty_bombs], bombs[!empty_bombs], " on")
@@ -614,7 +624,7 @@ target_type_string <- function(type, empty = "") {
   if (type == empty) {
     return ("a target")
   } else {
-    return (fix_articles(type, military_invariate_plurals))
+    return (fix_article(type, military_invariate_plurals))
   }
 }
 
@@ -622,11 +632,11 @@ target_type_strings <- function(types, empty = "") {
   if (is.factor(types)) {
     return (if_else(types == empty, 
                     "a target", 
-                    articles_fixes(as.character(types), military_invariate_plurals)))
+                    fix_articles(as.character(types), military_invariate_plurals)))
   } else {
     return (if_else(types == empty, 
                     "a target", 
-                    articles_fixes(types, military_invariate_plurals)))
+                    fix_articles(types, military_invariate_plurals)))
   }
 }
 
@@ -689,6 +699,15 @@ format_aircraft_types <- function(types) {
 }
 
 format_military_times <- function(digits) {
+  return (gsubs(digits, changes = c("\\1:\\2"  = "^(\\d{1,2}):(\\d{2}):(\\d{2})", 
+                                    "\\1:\\2"  = "^(\\d{1,2})(\\d{2})", 
+                                    "\\1:\\20" = "^(\\d)([03])$", 
+                                    "\\1:00"   = "^(1[0-9]|2[0-3])$", 
+                                    "\\1:\\20" = "^(\\d)(\\d)$", 
+                                    "\\1:00"   = "^(\\d)$")))
+}
+
+format_military_times_orig <- function(digits) {
   return (gsub(pattern = "^(\\d)$", replacement = "\\1:00", 
           gsub(pattern = "^(\\d)(\\d)$", replacement = "\\1:\\20", 
           gsub(pattern = "^(1[0-9]|2[0-3])$", replacement = "\\1:00", 
@@ -698,6 +717,22 @@ format_military_times <- function(digits) {
 }
 
 ampm_to_24_hour <- function(times) {
+  return (gsubs(times, changes = c(           " ?[Aa][Mm]", 
+                                   "13:\\1" = "^0?1:(\\d{2}) ?[Pp][Mm]", 
+                                   "14:\\1" = "^0?2:(\\d{2}) ?[Pp][Mm]", 
+                                   "15:\\1" = "^0?3:(\\d{2}) ?[Pp][Mm]", 
+                                   "16:\\1" = "^0?4:(\\d{2}) ?[Pp][Mm]", 
+                                   "17:\\1" = "^0?5:(\\d{2}) ?[Pp][Mm]", 
+                                   "18:\\1" = "^0?6:(\\d{2}) ?[Pp][Mm]", 
+                                   "19:\\1" = "^0?7:(\\d{2}) ?[Pp][Mm]", 
+                                   "20:\\1" = "^0?8:(\\d{2}) ?[Pp][Mm]", 
+                                   "21:\\1" = "^0?9:(\\d{2}) ?[Pp][Mm]", 
+                                   "22:\\1" = "^10:(\\d{2}) ?[Pp][Mm]", 
+                                   "23:\\1" = "^11:(\\d{2}) ?[Pp][Mm]", 
+                                   "00:\\1" = "^12:(\\d{2}) ?[Pp][Mm]")))
+}
+
+ampm_to_24_hour_orig <- function(times) {
   return (gsub(pattern = "^12:(\\d{2}) ?[Pp][Mm]",  replacement = "00:\\1", 
           gsub(pattern = "^11:(\\d{2}) ?[Pp][Mm]",  replacement = "23:\\1", 
           gsub(pattern = "^10:(\\d{2}) ?[Pp][Mm]",  replacement = "22:\\1", 
@@ -711,14 +746,6 @@ ampm_to_24_hour <- function(times) {
           gsub(pattern = "^0?2:(\\d{2}) ?[Pp][Mm]", replacement = "14:\\1", 
           gsub(pattern = "^0?1:(\\d{2}) ?[Pp][Mm]", replacement = "13:\\1", 
           gsub(pattern = " ?[Aa][Mm]", replacement = "", times))))))))))))))
-}
-
-format_day_periods <- function(periods) {
-  return (if_else(periods == "D", "day", 
-          if_else(periods == "N", "night", 
-          if_else(periods == "M", "morning", 
-          if_else(periods == "E", "evening", 
-          "")))))
 }
 
 month_num_to_name <- function(month_strings) {

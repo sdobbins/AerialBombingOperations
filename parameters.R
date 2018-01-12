@@ -5,13 +5,19 @@
 
 ### Developer Control -------------------------------------------------------
 
-# debug control
-debug_mode_on <- TRUE
-debug_sample_size <- 1024
-
-# data refresh
-refresh_data <- TRUE
-full_write <- FALSE
+if (!for_publication) {
+  # debug control
+  debug_mode_on <- TRUE
+  
+  # data refresh
+  refresh_data <- TRUE
+  full_write <- FALSE
+} else {
+  # publication settings
+  debug_mode_on <- FALSE
+  refresh_data <- FALSE
+  full_write <- FALSE
+}
 
 # JIT compiler settings
 use_compiler <- TRUE
@@ -25,6 +31,7 @@ coord_buffer <- 0.1
 coord_buffer_tight <- 0.001
 lat_long_error_threshold_tight <- round(sqrt(2) / 20 - 0.00005, digits = 4L)
 lat_long_error_threshold <- 0.5
+
 
 ### writing data
 downsample <- TRUE
