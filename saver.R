@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.6
-# @date 2017-11-19 01:00
+# @version 0.9.9.7
+# @date 2018-01-13 21:00
 
 
 ### Save Data ---------------------------------------------------------------
@@ -19,17 +19,20 @@ for (war_data_tag in war_data_tags) {
          quote = TRUE)
 }
 
+
+### Adjustments -------------------------------------------------------------
+
 debug_message("saving workspace")
-save.image(file = paste0(save_path, Sys.Date(), save_extension))
+save.image(file = full_save_filepath)
 
 
 ### Sample and Resave -------------------------------------------------------
 
 if (downsample) {
   source('downsampler.R')
-  
-  if (downsampled) {
-    debug_message("saving workspace with downsamples")
-    save.image(file = paste0(save_path_downsampled, Sys.Date(), save_extension))
-  }
+  # pipeR::`%>>%`, which is set by utils_general.R to have the name `%>%`, 
+  # doesn't work on shinyapps.io, so it should be removed before the workspace is saved
+  rm(`%>%`)
+  debug_message("saving workspace with downsamples")
+  save.image(file = save_filepath)
 }

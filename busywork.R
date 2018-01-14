@@ -1,18 +1,16 @@
 # @author Scott Dobbins
-# @version 0.9.9.6
-# @date 2017-11-19 01:00
+# @version 0.9.9.7
+# @date 2018-01-11 22:00
 
 
 ### Save Filepaths ----------------------------------------------------------
 
 # previous saves
 local_save_directory <- paste0(local_directory, local_save_infix)
-most_recent_save_file <- paste0(save_name_downsampled, most_recent_save_date, save_extension)
-most_recent_save_filepath <- paste0(local_save_directory, most_recent_save_file)
-
-# next saves
-save_path <- paste0(external_save_directory, save_name)
-save_path_downsampled <- paste0(external_save_directory, save_name_downsampled)
+full_save_file <- paste0(save_name, save_date, save_extension)
+full_save_filepath <- paste0(local_save_directory, full_save_file)
+save_file <- paste0(save_name_downsampled, save_date, save_extension)
+save_filepath <- paste0(local_save_directory, save_file)
 
 
 ### Original Data Filepaths -------------------------------------------------

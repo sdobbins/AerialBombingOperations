@@ -1,16 +1,17 @@
 # @author Scott Dobbins
-# @version 0.9.9.6
-# @date 2017-11-19 01:00
+# @version 0.9.9.7
+# @date 2018-01-11 22:00
 
 
 ### Imports -----------------------------------------------------------------
 
 # import pluralizer
 if (!for_publication) {
-  source('~/Developer/Github/acid/acid.R')
-} else {
-  source('acid/acid.R')
-}
+  source('~/Developer/Github/acid/grammar_number.R')
+}# else {
+#  source('acid/grammar_utils.R')
+#  source('acid/grammar_number.R')
+#}
 
 
 ### Local Values ------------------------------------------------------------

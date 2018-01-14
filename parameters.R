@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.6
-# @date 2017-11-19 01:00
+# @version 0.9.9.7
+# @date 2018-01-13 21:00
 
 
 ### Developer Control -------------------------------------------------------
@@ -11,7 +11,7 @@ if (!for_publication) {
   
   # data refresh
   refresh_data <- TRUE
-  full_write <- FALSE
+  full_write <- TRUE
 } else {
   # publication settings
   debug_mode_on <- FALSE
@@ -35,7 +35,7 @@ lat_long_error_threshold <- 0.5
 
 ### writing data
 downsample <- TRUE
-downsample_size <- 1e5
+downsample_size <- 2e5
 
 
 ### unit testing

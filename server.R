@@ -1,6 +1,6 @@
 # @author Scott Dobbins
-# @version 0.9.9.6
-# @date 2017-11-19 01:00
+# @version 0.9.9.7
+# @date 2018-01-11 22:00
 
 
 # ### initialize plotly ###
@@ -303,7 +303,8 @@ shinyServer(function(input, output, session) {
   
   # initialize civilian leaflet map
   output$civilian_map <- renderLeaflet({
-    civilian <- leaflet() %>% addProviderTiles("CartoDB.Positron", layerId = "civilian_base")
+    civilian <- leaflet() %>% addProviderTiles(provider = "CartoDB.Positron", 
+                                               layerId = "civilian_base")
     civilian
   })
 
@@ -958,7 +959,9 @@ shinyServer(function(input, output, session) {
 ### Map Drawers -------------------------------------------------------------
 
   swap_map_base <- function(type, options = NULL) {
-    overview_proxy %>% clearTiles() %>% addProviderTiles(provider = type, layerId = "overview_base", options = options)
+    overview_proxy %>% clearTiles %>% addProviderTiles(provider = type, 
+                                                       layerId = "overview_base", 
+                                                       options = options)
   }
   
   fix_map_base <- function(map_type) {
@@ -973,7 +976,8 @@ shinyServer(function(input, output, session) {
   swap_map_labels <- function(type) {
     overview_proxy %>% removeTiles(layerId = "overview_labels")
     if (type != "none") {
-      overview_proxy %>% addProviderTiles(type, layerId = "overview_labels")
+      overview_proxy %>% addProviderTiles(provider = type, 
+                                          layerId = "overview_labels")
     }
   }
   

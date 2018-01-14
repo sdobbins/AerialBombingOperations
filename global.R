@@ -26,7 +26,6 @@ library(data.table)     # data processing
 library(DT)             # web tables
 # library(rgdal)          # map reading
 library(stringdist)     # string matching
-library(pipeR)
 
 
 ### Custom Utilities --------------------------------------------------------
@@ -36,11 +35,13 @@ for_publication <- TRUE
 
 # standard personal functions
 if (for_publication) {
-  print("loaded all packages")
-  load("Shiny_downsampled_2018-01-12.RData")
-  print("loaded RData")
+  message("loaded all packages")
+  load("Shiny_downsampled_2018-01-13.RData")
   #load(most_recent_save_file)
+  message("loaded RData")
 } else {
+  # better pipe, though it doesn't seem to work on shinyapps.io
+  library(pipeR)
   source('~/Developer/Github/utils/utils_standard.R')
   
   
@@ -148,7 +149,7 @@ if (for_publication) {
       }
     } else {
       started.at <- proc.time()
-      load(most_recent_save_filepath)
+      load(save_filepath)
       debug_message_p0("Loaded in ", timetaken(started.at))
     }
     
