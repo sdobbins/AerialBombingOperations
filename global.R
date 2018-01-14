@@ -31,7 +31,7 @@ library(stringdist)     # string matching
 ### Custom Utilities --------------------------------------------------------
 
 # for publication on shinyapps.io (sets flags correctly for publication when TRUE)
-for_publication <- TRUE
+for_publication <- FALSE
 
 # standard personal functions
 if (for_publication) {
@@ -41,6 +41,7 @@ if (for_publication) {
   message("loaded RData")
 } else {
   # better pipe, though it doesn't seem to work on shinyapps.io
+  #* though this may be due to %>>% conflicting with my own bitshift operator
   library(pipeR)
   source('~/Developer/Github/utils/utils_standard.R')
   

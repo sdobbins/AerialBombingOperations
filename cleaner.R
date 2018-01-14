@@ -583,86 +583,86 @@ WW2_bombs[["Target_City"]] %>%
                             "Wittlich"             = "Wiltlich"))
 
 # a few specific fixes for obvious specific errors
-WW2_bombs[Target_City == "Tripoli" & Target_Latitude > 33, 
+WW2_bombs[Target_City == "Tripoli" & Target_Latitude > 33,
           Target_Latitude := 32.81]
-WW2_bombs[Target_City == "Tripoli" & Target_Longitude > 35, 
+WW2_bombs[Target_City == "Tripoli" & Target_Longitude > 35,
           Target_Longitude := 13.21]
-WW2_bombs[Target_City == "Fondouk", 
-          `:=`(Target_Latitude = 36.67, 
+WW2_bombs[Target_City == "Fondouk",
+          `:=`(Target_Latitude = 36.67,
                Target_Longitude = 10.45)]
-WW2_bombs[Target_City == "Karlovy Vary", 
+WW2_bombs[Target_City == "Karlovy Vary",
           Target_Latitude := 50.22]
-WW2_bombs[Target_City %in% c("Couronne", "le Havre", "le Port Boulet", "Touques", "Villerville"), 
+WW2_bombs[Target_City %in% c("Couronne", "le Havre", "le Port Boulet", "Touques", "Villerville"),
           Target_Longitude := 0.1]
-WW2_bombs[Target_City == "Cabourg", 
+WW2_bombs[Target_City == "Cabourg",
           Target_Longitude := -0.1]
-WW2_bombs[Target_City == "Octeville", 
+WW2_bombs[Target_City == "Octeville",
           Target_Longitude := -1.65]
-WW2_bombs[Target_City == "Dresden", 
+WW2_bombs[Target_City == "Dresden",
           Target_Latitude := 51.05]
-WW2_bombs[Target_City == "Athens", 
-          `:=`(Target_Latitude = 37.93, 
+WW2_bombs[Target_City == "Athens",
+          `:=`(Target_Latitude = 37.93,
                Target_Longitude = 23.67)]
-WW2_bombs[Target_City == "Parndorf", 
+WW2_bombs[Target_City == "Parndorf",
           Target_Latitude := 48]
-WW2_bombs[Target_City == "Ober Drauburg" & 
-            Target_Longitude > 14, 
+WW2_bombs[Target_City == "Ober Drauburg" &
+            Target_Longitude > 14,
           Target_Latitude := Target_Latitude - 2.03]
-WW2_bombs[Target_City %in% c("Izumi", "Minamata") & 
-            Target_Latitude > 35, 
+WW2_bombs[Target_City %in% c("Izumi", "Minamata") &
+            Target_Latitude > 35,
           Target_Latitude := Target_Latitude - 6]
-WW2_bombs[Target_City == "Misrate" & 
-            Target_Latitude > 35, 
+WW2_bombs[Target_City == "Misrate" &
+            Target_Latitude > 35,
           Target_Latitude := Target_Latitude - 3]
-WW2_bombs[Target_City == "Tocra", 
-          `:=`(Target_Latitude = 32.5, 
+WW2_bombs[Target_City == "Tocra",
+          `:=`(Target_Latitude = 32.5,
                Target_Longitude = 20.6)]
-WW2_bombs[Target_City %like% "Maug" & 
-            Target_Latitude < 15, 
+WW2_bombs[Target_City %like% "Maug" &
+            Target_Latitude < 15,
           Target_Latitude := Target_Latitude + 10]
-WW2_bombs[Target_City == "Konigsberg" & 
-            Target_Latitude < 54, 
+WW2_bombs[Target_City == "Konigsberg" &
+            Target_Latitude < 54,
           Target_Latitude := Target_Latitude + 2]
-WW2_bombs[Target_City == "la Goulette" & 
-            Target_Latitude > 38, 
+WW2_bombs[Target_City == "la Goulette" &
+            Target_Latitude > 38,
           Target_Latitude := Target_Latitude - 2]
-WW2_bombs[Target_City == "Sinsiang" & 
-            Target_Longitude > 140, 
+WW2_bombs[Target_City == "Sinsiang" &
+            Target_Longitude > 140,
           Target_Longitude := Target_Longitude - 7]
-WW2_bombs[Target_City == "Kalamaki" & 
-            Target_Latitude > 38 & 
-            Target_Longitude > 24, 
-          `:=`(Target_Latitude = Target_Latitude - 2, 
+WW2_bombs[Target_City == "Kalamaki" &
+            Target_Latitude > 38 &
+            Target_Longitude > 24,
+          `:=`(Target_Latitude = Target_Latitude - 2,
                Target_Longitude = 20.9)]
-WW2_bombs[Target_City == "Salween River" & 
-            Target_Latitude < 15, 
+WW2_bombs[Target_City == "Salween River" &
+            Target_Latitude < 15,
           Target_Latitude := 18]
-WW2_bombs[Target_City == "Myaungmya" & 
-            Target_Latitude < 15, 
+WW2_bombs[Target_City == "Myaungmya" &
+            Target_Latitude < 15,
           Target_Latitude := Target_Latitude + 6]
-WW2_bombs[Target_City == "Alost", 
+WW2_bombs[Target_City == "Alost",
           Target_Latitude := Target_Latitude + 0.85]
-WW2_bombs[Target_City %in% c("Beauvais", "St Gilles") & 
-            Target_Longitude < 0, 
+WW2_bombs[Target_City %in% c("Beauvais", "St Gilles") &
+            Target_Longitude < 0,
           Target_Longitude := -Target_Longitude]
-WW2_bombs[Target_City == "Flottemanville" & 
-            Target_Longitude < -2, 
+WW2_bombs[Target_City == "Flottemanville" &
+            Target_Longitude < -2,
           Target_Longitude := -1.45]
-WW2_bombs[Target_City == "Kerlin" & 
-            Target_Latitude < 47.5, 
+WW2_bombs[Target_City == "Kerlin" &
+            Target_Latitude < 47.5,
           Target_Latitude := 47.8]
-WW2_bombs[Target_City == "Giverville" & 
-            Target_Latitude < 49, 
+WW2_bombs[Target_City == "Giverville" &
+            Target_Latitude < 49,
           Target_Latitude := Target_Latitude + 7]
-WW2_bombs[Target_City == "Casale Monferrato" & 
-            Target_Latitude < 44, 
-          `:=`(Target_Latitude = 45.13, 
+WW2_bombs[Target_City == "Casale Monferrato" &
+            Target_Latitude < 44,
+          `:=`(Target_Latitude = 45.13,
                Target_Longitude = 8.45)]
-WW2_bombs[Target_City == "Benghazi" & 
-            Target_Longitude > 21, 
+WW2_bombs[Target_City == "Benghazi" &
+            Target_Longitude > 21,
           Target_Longitude := Target_Longitude - 5]
-WW2_bombs[Target_City == "Pasawng" & 
-            Target_Longitude > 98, 
+WW2_bombs[Target_City == "Pasawng" &
+            Target_Longitude > 98,
           Target_Longitude := Target_Longitude - 1]
 
 WW2_bombs[["Target_Type"]] %>% 
@@ -675,9 +675,9 @@ WW2_bombs[["Target_Type"]] %>%
                 exclude = c(measurement_units, "unidentified", "unknown"))
 
 # a few specific fixes for obvious specific errors
-WW2_bombs[Target_Country == "NEW GUINEA" & 
-            Target_Latitude %!between% c(-6.3, -6.9) & 
-            Target_Longitude < 141, 
+WW2_bombs[Target_Country == "NEW GUINEA" &
+            Target_Latitude %!between% c(-6.3, -6.9) &
+            Target_Longitude < 141,
           Target_Country := "INDONESIA"]
 
 WW2_bombs[["Target_Country"]] %>% 
@@ -707,26 +707,26 @@ WW2_bombs[["Target_Country"]] %>%
                             "Japan"                      = "VOLCANO AND BONIN ISLANDS")) %>% 
   format_levels(proper_noun_phrases)
 
-WW2_bombs[Target_City == "Baldeney See", 
+WW2_bombs[Target_City == "Baldeney See",
           Target_Country := "Germany"]
-WW2_bombs[Target_City == "Woody Island" & 
-            Target_Country == "Vietnam", 
+WW2_bombs[Target_City == "Woody Island" &
+            Target_Country == "Vietnam",
           Target_Latitude := Target_Latitude + 28]
-WW2_bombs[Target_City == "Rayak", 
+WW2_bombs[Target_City == "Rayak",
           Target_Country := "Lebanon"]
-WW2_bombs[Target_City == "Ostheim", 
+WW2_bombs[Target_City == "Ostheim",
           Target_Country := "France"]
-WW2_bombs[Target_Country == "Poland" & 
-            Target_Latitude < 30, 
+WW2_bombs[Target_Country == "Poland" &
+            Target_Latitude < 30,
           Target_Latitude := Target_Latitude + 20]
-WW2_bombs[Target_Country == "Egypt" & 
-            Target_Latitude > 33, 
+WW2_bombs[Target_Country == "Egypt" &
+            Target_Latitude > 33,
           Target_Latitude := Target_Latitude - 5]
-WW2_bombs[Target_City == "Masan", 
+WW2_bombs[Target_City == "Masan",
           Target_Country := "Korea"]
-WW2_bombs[Target_City == "Pointe de Lornel", 
+WW2_bombs[Target_City == "Pointe de Lornel",
           Target_Country := "France"]
-WW2_bombs[Target_City == "el Wak", 
+WW2_bombs[Target_City == "el Wak",
           Target_Country := "Somalia"]
 
 WW2_bombs[["Target_Industry"]] %>% 
@@ -801,9 +801,9 @@ known_duplicate_city_names <- c("Asa", "Baja", "Bergen", "Bira", "Brod", "Bruges
 #                                                                                                              by = Target_City][loc_sd > coord_buffer, 
 #                                                                                                                                sort(as.character(Target_City))]
 WW2_bombs %>%
-  fill_matching_values(code_col = "Target_City", 
-                       value_col = "Target_Country", 
-                       drop.missing.levels = TRUE, 
+  fill_matching_values(code_col = "Target_City",
+                       value_col = "Target_Country",
+                       drop.missing.levels = TRUE,
                        code_exceptions = known_duplicate_city_names)
 
 source('validation_cleaning.R')
