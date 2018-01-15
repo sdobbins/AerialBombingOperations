@@ -342,7 +342,7 @@ for (i in seq_len(nrow(WW2_loc_by_coord))) {
                        numbers_y = WW2_country_locs[["mean_long"]], 
                        ref = c(lat, long)) / WW2_country_locs[["size"]]
   temp_table <- cbind(WW2_country_locs, data.table('dists' = dists))
-  predicted_country <- temp_table[which.min(dists), Target_Country]# [["Target_Country"]][which.min(dists)]
+  predicted_country <- WW2_country_locs[["Target_Country"]][which.min(dists)] # temp_table[which.min(dists), Target_Country]
   
   if (country != predicted_country) {
     country_ranking <- ranking(temp_table, 
@@ -354,9 +354,9 @@ for (i in seq_len(nrow(WW2_loc_by_coord))) {
                                         ref_col = "Target_Country", 
                                         rank = 2L)
     
-    predicted_country_dist <- temp_table[Target_Country == predicted_country, min(dists)]
+    predicted_country_dist <- min(dists[WW2_country_locs[["Target_Country"]] == predicted_country]) # temp_table[Target_Country == predicted_country, min(dists)]
     if (country %c% recorded_countries) {
-      country_dist <- temp_table[Target_Country == country, min(dists)]
+      country_dist <- min(dists[WW2_country_locs[["Target_Country"]] == predicted_country]) # temp_table[Target_Country == country, min(dists)]
     } else {
       country_dist <- NA_real_
     }
